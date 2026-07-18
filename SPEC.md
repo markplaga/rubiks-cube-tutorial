@@ -2,13 +2,13 @@
 
 ## Status
 
-This is the canonical specification for the current CUBED application. It includes the original build requirements plus later additions: 20 alternate cube palettes, live recoloring, automatic control hiding after pattern selection, comprehensive Help content, and GitHub Pages publishing.
+This is the canonical specification for the current CUBED application. It includes the original build requirements plus later additions: 20 alternate cube palettes, live recoloring, automatic control hiding after pattern selection, an always-available animated SOLVE engine, comprehensive Help content, and GitHub Pages publishing.
 
 The application itself must remain a single `index.html` file with inline CSS and JavaScript. Repository support files such as `SPEC.md` and `.nojekyll` are allowed.
 
 ## 1. Overview
 
-CUBED is a full-screen, responsive Three.js Rubik’s Cube tutorial. Users can orbit and zoom, turn faces with buttons or keyboard, scramble and reset, follow an eight-step beginner guide with playable algorithms, play 25 cumulative decorative patterns, adjust pattern delay and camera spin, switch among four visual environments, change all six cube colors through named palettes, hide interface panels for a clean view, and open Tech and Help overlays.
+CUBED is a full-screen, responsive Three.js Rubik’s Cube tutorial. Users can orbit and zoom, turn faces with buttons or keyboard, scramble, automatically solve, and reset, follow an eight-step beginner guide with playable algorithms, play 25 cumulative decorative patterns, adjust pattern delay and camera spin, switch among four visual environments, change all six cube colors through named palettes, hide interface panels for a clean view, and open Tech and Help overlays.
 
 It must work on desktop, mobile, high-DPI devices, orientation changes, and in-app browsers.
 
@@ -30,10 +30,10 @@ It must work on desktop, mobile, high-DPI devices, orientation changes, and in-a
 - Guide panel: desktop right-side glass card; mobile bottom sheet; smooth hide/show.
 - Control deck:
   - Twelve move buttons: `U U' L L' F F' R R' B B' D D'`.
-  - SCRAMBLE and RESET.
+  - SCRAMBLE, SOLVE, and RESET.
   - Pattern Gallery and Color Palette dropdowns side by side.
   - Delay and Spin sliders.
-- `#seq`: pattern name and move-chip readout above the deck; moves down when controls are hidden.
+- `#seq`: pattern or AUTO SOLVE name and move-chip readout above the deck; moves down when controls are hidden.
 - `#hud`: top-center current-move flash for about 0.5 seconds.
 - Desktop hint: drag to orbit, scroll to zoom, tap a move button.
 - Tech and Help: full-screen modal overlays with dimmed backdrop, scrollable glass sheet, and ✕.
@@ -141,12 +141,32 @@ Supported tokens: `U D L R F B M E S x y z`, optionally with `'` and/or `2`.
 - Ease-out cubic via `requestAnimationFrame`.
 - Standard/guide speed about 260ms, pattern 300ms, scramble 130ms; doubles take 1.6× and animate as one 180° turn.
 - On completion, reattach cubies; round positions to SP multiples and Euler orientation to π/2 multiples, then rebuild quaternion.
-- All input uses one FIFO queue `{t,speed,pattern?,idx?,last?}`.
+- All input uses one FIFO queue `{t,speed,pattern?,solution?,noDelay?,idx?,last?}`.
 - HUD flashes every move token.
 - SCRAMBLE: 22 face turns, no same face twice, random plain/prime; hide sequence strip.
-- RESET: clear move queue and waiting patterns, hide sequence, allow an in-flight turn to finish safely, rebuild solved, retain palette.
+- SOLVE: cancel unplayed queued moves and waiting patterns; if a move is already animating, let it finish and include it in the state history; then animate an exact solution and show it as AUTO SOLVE in the sequence strip.
+- RESET: clear move queue, waiting patterns, solve request, and move history; hide sequence; allow an in-flight turn to finish safely; rebuild solved; retain palette.
 - Keyboard: U/D/L/R/F/B; Shift makes prime; Escape closes overlay or toggles guide; ignore moves while form controls have focus.
 - Reduced motion: move and theme duration about 80ms, short interface transitions, non-smooth chip scrolling.
+
+### Automatic solve engine
+
+CUBED must solve any state that can be created inside the application. Because all cube changes occur through the legal move engine, maintain a reversible ledger of every **completed** face, slice, and whole-cube turn.
+
+- Record completed non-solution moves only. Never record a move before its animation finishes.
+- Reduce adjacent turns of the same base modulo four: examples `R R → R2`, `R R' →` nothing, `R2 R → R'`.
+- Invert a state by reversing the ledger and inverting each token: plain ↔ prime; doubles remain doubles.
+- SOLVE behavior:
+  1. Ignore repeated SOLVE presses while a solution is active or pending.
+  2. Clear unstarted move-queue items and pending patterns.
+  3. Hide the old pattern sequence.
+  4. If a turn is in flight, set a pending solve request; after that move snaps and is recorded, construct the solution.
+  5. Show `AUTO SOLVE` and all solution tokens in `#seq`.
+  6. Queue solution turns at about 220ms per quarter turn (80ms with reduced motion), with no Delay-slider pauses; doubles remain 1.6×.
+  7. Temporarily ignore manual move buttons, keyboard turns, Scramble, pattern selection, and guide Play buttons while solving. Palette, theme, camera, rail, and Reset remain usable.
+  8. On the final solution move, clear the ledger, restore the SOLVE button, and flash `SOLVED` in the HUD.
+- RESET interrupts a solution safely by clearing the request, queue, and ledger, then rebuilding solved after any in-flight turn finishes.
+- The guarantee is exact for every state produced by this application. It does not claim to infer an externally edited sticker state because the app has no sticker-state import/editor.
 
 ## 8. Spin
 
@@ -226,11 +246,11 @@ Selection behavior:
 
 - GUIDE toggles tutorial; panel ✕ hides it; preserve step and cube.
 - CONTROLS toggles deck; hidden sequence moves down; hide GUIDE and CONTROLS for clean view.
-- TECH explains Three.js/WebGL, camera, cubies, runtime textures, live palette replacement, pivot turns, snapping, animation, queue, lights, shadows, stars, grid, themes, CSS/UI, fonts, input, and GitHub Pages hosting.
+- TECH explains Three.js/WebGL, camera, cubies, runtime textures, live palette replacement, pivot turns, snapping, animation, queue, reversible move ledger and SOLVE engine, lights, shadows, stars, grid, themes, CSS/UI, fonts, input, and GitHub Pages hosting.
 - HELP must document every current capability, including:
   - orbit, wheel, pinch, spin direction/off/drag pause;
   - buttons, notation, slices, rotations, queue, HUD, keyboard;
-  - Scramble and Reset, including waiting-pattern clearing and palette retention;
+  - Scramble, SOLVE, and Reset, including solution cancellation rules, AUTO SOLVE sequence display, waiting-pattern clearing, history clearing, and palette retention;
   - all 25 cumulative patterns, waiting, repeat selection, automatic control hiding, sequence states/persistence, Delay;
   - Standard plus 20 palettes, live recoloring, state preservation, Reset persistence, reload to standard;
   - eight guide steps, ticks, navigation, Play, close behavior;
@@ -263,6 +283,8 @@ Required quality:
 - Cube centered at every DPI/orientation; no cubie drift; Reset solved with active palette.
 - Palette changes never alter cubie state.
 - Pattern auto-hide never hides sequence readout.
+- SOLVE must end in canonical solved state for arbitrary app-generated sequences, including slices and whole-cube rotations.
+- A pending SOLVE must account for the in-flight move and cancel all unstarted work.
 - Target about 60fps on a mid-range phone.
 - Review Help whenever user-facing behavior changes.
 
@@ -270,25 +292,27 @@ Static validation before publishing:
 
 1. Syntax-check inline JavaScript.
 2. Parse HTML and CSS; check duplicate IDs.
-3. Verify 12 move buttons, 8 steps, 9 guide algorithm blocks, 25 exact patterns, 21 exact palettes, and all 120 alternate-palette hex values.
+3. Verify 12 move buttons plus SCRAMBLE/SOLVE/RESET, 8 steps, 9 guide algorithm blocks, 25 exact patterns, 21 exact palettes, and all 120 alternate-palette hex values.
 4. Verify slot order `U,D,B,F,R,L`.
 5. Verify pattern selection adds `controls-hidden` and deactivates CONTROLS.
 6. Verify Reset does not reset palette index.
 7. Verify exact Delay and Spin ranges/defaults.
 8. Verify Scramble count/no-repeat rule, queue, 40ms pattern waiting, every-frame sizing, resize/orientation/visualViewport listeners, themes, Help coverage, no storage, and no OrbitControls.
-9. Run move identities: each move plus inverse, each half turn twice, `R U R' U'` six times, and Checkerboard twice.
+9. Verify SOLVE button, completed-move ledger, adjacent-turn reduction, token inversion, queue/pattern cancellation, in-flight solve request, AUTO SOLVE sequence, no pattern delay, interaction guards, final history clearing, SOLVED HUD, and Reset interruption.
+10. Run move identities: each move plus inverse, each half turn twice, `R U R' U'` six times, and Checkerboard twice.
 
 Current implementation validation snapshot:
 
 - [x] JavaScript syntax passed.
 - [x] HTML parsed without recovery errors; no duplicate IDs.
 - [x] CSS parsed with no top-level errors.
-- [x] 23/23 static feature checks passed.
+- [x] 31/31 static feature checks passed.
 - [x] 12 moves, 8 steps, 9 guide algorithm blocks, 25 patterns, and 21 palettes matched.
 - [x] All pattern sequences and all alternate palette values matched exactly.
-- [x] Pattern auto-hide, live palette texture replacement, Reset palette retention, and comprehensive Help coverage were present.
+- [x] Pattern auto-hide, live palette texture replacement, Reset palette retention, automatic SOLVE behavior, and comprehensive Help coverage were present.
 - [x] Every-frame and event-driven sizing checks were present.
 - [x] 26/26 discrete move-identity tests passed for `U D L R F B M E S x y z`, the sixfold warm-up, and double Checkerboard.
+- [x] 250/250 deterministic randomized solver simulations returned app-generated states to canonical solved state.
 - [ ] Repeat manual WebGL interaction testing in deployed desktop and mobile browsers after future code changes.
 
 ## 16. Acceptance checklist
@@ -300,7 +324,9 @@ Current implementation validation snapshot:
 - [ ] Doubles are one 180° animation; slices and rotations work.
 - [ ] Snapping prevents drift.
 - [ ] Scramble is 22 turns with no consecutive same face.
-- [ ] Reset clears active/waiting work, solves, clears sequence, and keeps palette.
+- [ ] SOLVE is always available, cancels unstarted work, includes an in-flight move, animates AUTO SOLVE without pattern delays, and ends solved.
+- [ ] SOLVE handles face, slice, whole-cube, prime, and double moves; repeated SOLVE input is ignored while active.
+- [ ] Reset clears active/waiting/solution work and history, solves, clears sequence, and keeps palette.
 - [ ] Eight exact guide steps and all Play/navigation controls work.
 - [ ] All 25 patterns are exact, cumulative, repeatable, and wait correctly.
 - [ ] Pattern selection immediately hides controls; CONTROLS restores them.
@@ -311,7 +337,7 @@ Current implementation validation snapshot:
 - [ ] Reset retains palette; reload returns to standard.
 - [ ] Four exact themes transition correctly.
 - [ ] GUIDE/CONTROLS state and TECH/HELP overlay close behavior work.
-- [ ] TECH and HELP document every current capability.
+- [ ] TECH and HELP document every current capability, including the reversible ledger and SOLVE behavior.
 - [ ] Mobile/in-app-browser layout and reduced motion work.
 - [ ] `main` and `gh-pages` publish the same `index.html`.
 - [ ] `SPEC.md` is updated whenever behavior changes.
