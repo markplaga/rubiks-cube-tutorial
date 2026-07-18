@@ -68,13 +68,13 @@
 
   /* ---------- tutorial panel ---------- */
   #panel{
-    position:fixed;top:86px;right:22px;bottom:118px;width:378px;z-index:9;
+    position:fixed;top:86px;right:134px;bottom:118px;width:378px;z-index:9;
     display:flex;flex-direction:column;
     background:var(--glass);backdrop-filter:blur(18px);
     border:1px solid var(--glass-line);border-radius:var(--radius);
     overflow:hidden;transition:transform .4s cubic-bezier(.2,.8,.2,1);
   }
-  #panel.hidden{transform:translateX(calc(100% + 30px))}
+  #panel.hidden{transform:translateX(calc(100% + 170px))}
   .panel-head{
     padding:16px 20px 12px;border-bottom:1px solid var(--glass-line);
     display:flex;align-items:center;justify-content:space-between;
@@ -126,12 +126,50 @@
   .panel-foot button.primary:hover{filter:brightness(1.12);color:var(--ink)}
   .panel-foot button:disabled{opacity:.35;pointer-events:none}
 
-  #panelToggle{
-    position:fixed;top:86px;right:22px;z-index:8;
+  /* ---------- right-side button rail ---------- */
+  #rail{position:fixed;top:86px;right:22px;z-index:11;display:flex;flex-direction:column;gap:8px}
+  #rail button{
     background:var(--glass);backdrop-filter:blur(14px);
     border:1px solid var(--glass-line);border-radius:12px;
-    color:var(--text);font-family:'Chakra Petch',sans-serif;font-size:12px;
-    letter-spacing:.1em;padding:11px 16px;cursor:pointer;
+    color:var(--muted);font-family:'Chakra Petch',sans-serif;font-size:11px;
+    letter-spacing:.1em;padding:11px 0;width:100px;cursor:pointer;transition:all .2s;
+  }
+  #rail button:hover{color:var(--text)}
+  #rail button.on{border-color:var(--accent);color:var(--accent)}
+
+  body.deck-hidden #deck{display:none}
+  body.deck-hidden #seq{bottom:20px}
+
+  /* ---------- overlays (tech + help) ---------- */
+  .overlay{
+    position:fixed;inset:0;z-index:20;display:none;
+    align-items:center;justify-content:center;padding:20px;
+    background:rgba(5,6,12,.55);backdrop-filter:blur(6px);
+  }
+  body[data-theme="daylight"] .overlay{background:rgba(180,190,210,.45)}
+  .overlay.show{display:flex}
+  .sheet{
+    position:relative;width:min(720px,94vw);max-height:84vh;overflow-y:auto;
+    background:var(--glass);backdrop-filter:blur(22px);
+    border:1px solid var(--glass-line);border-radius:20px;padding:30px 32px;
+  }
+  .sheet::-webkit-scrollbar{width:6px}
+  .sheet::-webkit-scrollbar-thumb{background:var(--glass-line);border-radius:3px}
+  .sheet .close{
+    position:sticky;top:0;float:right;margin:-8px -10px 0 0;
+    border:none;background:transparent;color:var(--muted);
+    font-size:20px;cursor:pointer;line-height:1;
+  }
+  .sheet .close:hover{color:var(--text)}
+  .sheet h2{font-family:'Chakra Petch',sans-serif;font-size:24px;font-weight:600;margin-bottom:6px}
+  .sheet .sub{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:18px;font-family:'Chakra Petch',sans-serif}
+  .sheet h3{font-family:'Chakra Petch',sans-serif;font-size:15px;font-weight:600;color:var(--accent);margin:20px 0 6px}
+  .sheet p{font-size:13.5px;font-weight:300;line-height:1.7;color:var(--muted);margin-bottom:10px}
+  .sheet p strong{color:var(--text);font-weight:600}
+  .sheet kbd{
+    font-family:'Chakra Petch',sans-serif;font-size:12px;font-weight:600;
+    background:var(--accent-soft);color:var(--accent);
+    border-radius:6px;padding:2px 7px;
   }
 
   /* ---------- move deck ---------- */
@@ -215,13 +253,15 @@
   @media (max-width:880px){
     #panel{left:12px;right:12px;width:auto;top:auto;bottom:96px;max-height:46vh}
     #panel.hidden{transform:translateY(calc(100% + 120px))}
-    #panelToggle{top:auto;bottom:96px;right:12px}
+    #rail{top:72px;right:12px}
+    #rail button{width:82px;padding:9px 0;font-size:10px}
     #hint{display:none}
     #deck{bottom:10px;padding:9px 10px;gap:9px}
     .moves button{width:38px;height:34px;font-size:13px}
     header{padding:12px 14px}
     .brand small{display:none}
     .themes button{padding:7px 9px;font-size:11px}
+    .sheet{padding:22px 18px}
   }
 </style>
 </head>
@@ -244,7 +284,74 @@
 
 <div id="hud"></div>
 
-<button id="panelToggle" style="display:none">GUIDE ▸</button>
+<nav id="rail">
+  <button id="guideBtn" class="on">GUIDE</button>
+  <button id="deckBtn" class="on">CONTROLS</button>
+  <button id="techBtn">TECH</button>
+  <button id="helpBtn">HELP</button>
+</nav>
+
+<div class="overlay" id="techOverlay">
+  <div class="sheet">
+    <button class="close" data-close="techOverlay">✕</button>
+    <h2>Under the Hood</h2>
+    <div class="sub">The technologies behind this page</div>
+
+    <h3>Three.js &amp; WebGL — the 3D engine</h3>
+    <p>The cube lives inside a real-time 3D scene rendered by <strong>Three.js</strong>, a JavaScript library that sits on top of <strong>WebGL</strong> — the browser's low-level interface to your device's graphics chip (GPU). Every frame, the GPU redraws the whole scene from scratch: a <strong>perspective camera</strong> projects the 3D world onto your flat screen, giving the cube depth and foreshortening, and the entire page runs at up to 60 frames per second without any plugins.</p>
+
+    <h3>Building the cube</h3>
+    <p>What looks like one cube is actually <strong>27 small box meshes</strong> ("cubies") arranged in a 3×3×3 grid — just like the real puzzle. Each visible face gets its own material, and the glossy rounded stickers aren't image files: they're painted at load time onto invisible <strong>HTML canvases</strong> (rounded rectangles, a color gradient, a soft sheen) and then used as GPU textures. That keeps the whole site a single file with no image downloads.</p>
+
+    <h3>How a face turns</h3>
+    <p>When you press <strong>R</strong>, the nine cubies in the right-hand layer are temporarily re-parented onto an invisible <strong>pivot group</strong> at the cube's center. Rotating that one pivot spins all nine together. When the turn finishes, each cubie is handed back to the main cube, and its position and orientation are <strong>snapped</strong> to the exact 90° grid — orientations are stored as <strong>quaternions</strong>, a rotation math format that avoids the glitches of ordinary angles. This snap step is why thousands of moves never accumulate drift.</p>
+
+    <h3>Motion &amp; animation</h3>
+    <p>All movement runs through <strong>requestAnimationFrame</strong>, the browser API that syncs code to your screen's refresh rate. Turns use an <strong>ease-out cubic curve</strong> — fast at first, gently braking at the end — which is what makes them feel physical rather than robotic. A small <strong>move queue</strong> feeds one animation at a time, which is also how pattern playback inserts your chosen delay between moves.</p>
+
+    <h3>Light, shadow &amp; environments</h3>
+    <p>The scene mixes four light types: a <strong>hemisphere light</strong> (sky color above, ground color below), a <strong>directional key light</strong> that casts the soft shadow beneath the cube via <strong>shadow mapping</strong>, a colored <strong>rim light</strong> from behind, and a low ambient fill. Theme switching doesn't swap scenes — it smoothly <strong>interpolates</strong> every light color and intensity over one second, while the starfield (900 GPU-drawn points) and the synthwave grid fade in or out. The page background is a CSS gradient behind a transparent canvas.</p>
+
+    <h3>The interface layer</h3>
+    <p>Everything around the cube is plain <strong>HTML and CSS</strong> — no frameworks. The frosted-glass panels use <strong>backdrop-filter blur</strong>; colors flow from <strong>CSS custom properties</strong> so a theme change re-tints every button at once; layout is <strong>flexbox and grid</strong> with media queries reshaping it for phones. The two typefaces — <strong>Chakra Petch</strong> for headings and notation, <strong>Sora</strong> for reading text — load from Google Fonts.</p>
+
+    <h3>Input handling</h3>
+    <p>Orbiting uses <strong>Pointer Events</strong>, one API that covers mouse, touch, and stylus alike — dragging adjusts the camera's spherical coordinates around the cube. Zoom listens to mouse wheel and two-finger <strong>pinch</strong>. The keyboard works too: face letters make moves, Shift makes them counter-clockwise.</p>
+
+    <h3>Hosting &amp; delivery</h3>
+    <p>The entire site is <strong>one HTML file</strong> stored in a <strong>GitHub</strong> repository and served free by <strong>GitHub Pages</strong>. The only external pieces are Three.js (from the cdnjs content-delivery network) and the fonts. Every update is a git commit — push to the repository, and the live site refreshes itself.</p>
+  </div>
+</div>
+
+<div class="overlay" id="helpOverlay">
+  <div class="sheet">
+    <button class="close" data-close="helpOverlay">✕</button>
+    <h2>How to Use CUBED</h2>
+    <div class="sub">Every feature, explained</div>
+
+    <h3>Looking around</h3>
+    <p><strong>Drag</strong> anywhere on the background to orbit around the cube, and <strong>scroll or pinch</strong> to zoom in and out. The <strong>Spin</strong> slider in the controls sets an automatic rotation: drag it right of center for clockwise, left for counter-clockwise — the further from center, the faster. Dead center stops it. The spin keeps going during pattern playback, so you can watch a pattern build from every side.</p>
+
+    <h3>Turning the cube</h3>
+    <p>The twelve buttons in the control deck turn each face: <kbd>U</kbd> up, <kbd>D</kbd> down, <kbd>L</kbd> left, <kbd>R</kbd> right, <kbd>F</kbd> front, <kbd>B</kbd> back. A plain letter turns that face clockwise (as if you were looking straight at it); the apostrophe version (<kbd>R'</kbd>, "R prime") turns it counter-clockwise. In written algorithms, a <strong>2</strong> means a half-turn (180°). On a keyboard, press the letter for a move and hold <strong>Shift</strong> for the prime version. Queued presses play back one after another.</p>
+
+    <h3>Scramble &amp; Reset</h3>
+    <p><strong>Scramble</strong> applies 22 random turns — a fresh puzzle to practice on. <strong>Reset</strong> returns the cube instantly to solved. Nothing else ever resets the cube for you.</p>
+
+    <h3>The pattern gallery</h3>
+    <p>The <strong>✦ Pattern gallery</strong> dropdown holds 25 classic decorative patterns, from the Checkerboard to the Superflip. Pick one and it plays automatically: the full move sequence appears above the controls, the current move lights up as it's performed, and finished moves stay tinted so you always know where you are. The <strong>Delay</strong> slider sets the pause between moves, from 0.25 to 5 seconds — you can even change it mid-pattern.</p>
+    <p><strong>Patterns are cumulative:</strong> they play from wherever the cube currently is, not from solved, so you can stack one on another and discover combinations. If a pattern is still playing when you pick the next one, the new one waits its turn. For a pattern's "official" look, press Reset first — they're designed from a solved cube. Some patterns use slice turns (<kbd>M</kbd> <kbd>E</kbd> <kbd>S</kbd> — the middle layers) and <kbd>x</kbd>, a rotation of the whole cube; the player handles these automatically.</p>
+
+    <h3>The solving guide</h3>
+    <p>The <strong>Guide</strong> panel teaches the beginner's layer-by-layer method in 8 steps: notation, the white cross, white corners, middle edges, the yellow cross, then positioning and orienting the last layer. Each algorithm is shown as notation chips with a <strong>▶ Play</strong> button that performs the moves on this cube, so you can watch exactly what each sequence does. Use <strong>Back / Next</strong> to move between steps; the tick marks at the top track your progress.</p>
+
+    <h3>Themes</h3>
+    <p>The four names in the top bar — <strong>Nebula, Synthwave, Daylight, Ember</strong> — change the entire environment: background, lighting, shadows, starfield or grid, and the accent color of every control. The scene crossfades over about a second.</p>
+
+    <h3>The side buttons</h3>
+    <p><strong>GUIDE</strong> shows or hides the solving tutorial. <strong>CONTROLS</strong> shows or hides the whole control deck — hide both for a clean, full-screen view of the cube (lovely with a slow spin). <strong>TECH</strong> opens a tour of the technology behind this page, and <strong>HELP</strong> opens this guide. Press any of them again — or <kbd>Esc</kbd>, or tap outside the card — to close.</p>
+  </div>
+</div>
 
 <aside id="panel">
   <div class="panel-head">
@@ -713,18 +820,49 @@ stepBody.addEventListener('click', e=>{
 });
 renderStep();
 
-/* panel toggle (mobile / focus mode) */
+/* ============================================================
+   RAIL — guide / controls / tech / help
+============================================================ */
 const panel = document.getElementById('panel');
-const panelToggle = document.getElementById('panelToggle');
-function refreshToggle(){
-  panelToggle.style.display = panel.classList.contains('hidden') ? 'block' : 'none';
+const guideBtn = document.getElementById('guideBtn');
+const deckBtn  = document.getElementById('deckBtn');
+const techBtn  = document.getElementById('techBtn');
+const helpBtn  = document.getElementById('helpBtn');
+const techOverlay = document.getElementById('techOverlay');
+const helpOverlay = document.getElementById('helpOverlay');
+
+function syncRail(){
+  guideBtn.classList.toggle('on', !panel.classList.contains('hidden'));
+  deckBtn.classList.toggle('on', !document.body.classList.contains('deck-hidden'));
+  techBtn.classList.toggle('on', techOverlay.classList.contains('show'));
+  helpBtn.classList.toggle('on', helpOverlay.classList.contains('show'));
 }
-panelToggle.addEventListener('click', ()=>{ panel.classList.remove('hidden'); refreshToggle(); });
-document.getElementById('panelClose').addEventListener('click', ()=>{ panel.classList.add('hidden'); refreshToggle(); });
-// small close affordance: swipe/esc
-window.addEventListener('keydown', e=>{
-  if(e.key==='Escape'){ panel.classList.toggle('hidden'); refreshToggle(); }
+guideBtn.addEventListener('click', ()=>{ panel.classList.toggle('hidden'); syncRail(); });
+deckBtn.addEventListener('click', ()=>{ document.body.classList.toggle('deck-hidden'); syncRail(); });
+techBtn.addEventListener('click', ()=>{
+  techOverlay.classList.toggle('show'); helpOverlay.classList.remove('show'); syncRail();
 });
+helpBtn.addEventListener('click', ()=>{
+  helpOverlay.classList.toggle('show'); techOverlay.classList.remove('show'); syncRail();
+});
+document.getElementById('panelClose').addEventListener('click', ()=>{ panel.classList.add('hidden'); syncRail(); });
+document.querySelectorAll('.overlay').forEach(ov=>{
+  ov.addEventListener('click', e=>{ if(e.target===ov){ ov.classList.remove('show'); syncRail(); } });
+});
+document.querySelectorAll('.sheet .close').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.getElementById(b.dataset.close).classList.remove('show'); syncRail();
+  });
+});
+window.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){
+    const open = document.querySelector('.overlay.show');
+    if(open){ open.classList.remove('show'); }
+    else{ panel.classList.toggle('hidden'); }
+    syncRail();
+  }
+});
+syncRail();
 
 /* ============================================================
    PATTERN GALLERY
