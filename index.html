@@ -206,9 +206,9 @@
   #seq .sq.done{color:var(--text);background:var(--accent-soft)}
 
   @media (max-width:880px){
-    .patterns{width:100%;flex-direction:row;align-items:center;min-width:0;order:-1}
-    .patterns select{flex:1;max-width:none}
-    .delay-row{flex:1}
+    .patterns{width:100%;flex-direction:row;flex-wrap:wrap;align-items:center;min-width:0;order:-1}
+    .patterns select{flex:1 1 100%;max-width:none}
+    .delay-row{flex:1 1 45%}
     #deck{flex-wrap:wrap;max-width:94vw;justify-content:center}
     #seq{bottom:178px}
   }
@@ -277,8 +277,13 @@
     </select>
     <div class="delay-row">
       <label for="delaySlider">Delay</label>
-      <input id="delaySlider" type="range" min="0.5" max="5" step="0.25" value="1">
+      <input id="delaySlider" type="range" min="0.25" max="5" step="0.25" value="1">
       <span id="delayVal">1s</span>
+    </div>
+    <div class="delay-row">
+      <label for="spinSlider">Spin</label>
+      <input id="spinSlider" type="range" min="-1" max="1" step="0.05" value="0.1">
+      <span id="spinVal">0.1 ▸</span>
     </div>
   </div>
 </div>
@@ -764,6 +769,15 @@ PATTERNS.forEach((p,i)=>{
 delaySlider.addEventListener('input', ()=>{
   delayVal.textContent = (+delaySlider.value).toFixed(2).replace(/\.?0+$/,'') + 's';
 });
+const spinSlider = document.getElementById('spinSlider');
+const spinVal = document.getElementById('spinVal');
+function spinLabel(){
+  const v = +spinSlider.value;
+  const n = Math.abs(v).toFixed(2).replace(/\.?0+$/,'');
+  spinVal.textContent = v===0 ? 'off' : (v<0 ? '◂ '+n : n+' ▸');
+}
+spinSlider.addEventListener('input', spinLabel);
+spinLabel();
 
 function renderSeq(name, tokens){
   seqEl.innerHTML = `<span class="sq-name">${name}</span>` +
@@ -849,8 +863,8 @@ let t0 = performance.now();
 function loop(now){
   resize(); // self-correct if the in-app browser changed the viewport without firing events
   const dt = (now-t0)/1000; t0 = now;
-  // gentle idle drift when not dragging
-  if(!dragging && !animating && !queue.length) orbit.theta += dt*0.06;
+  // user-controlled auto spin (direction + speed); paused while dragging
+  if(!dragging) orbit.theta += dt * (+spinSlider.value) * 0.6;
   stars.rotation.y += dt*0.008;
   applyCamera();
   renderer.render(scene, camera);
