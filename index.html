@@ -150,7 +150,7 @@
   }
   .moves button:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
   .deck-sep{width:1px;align-self:stretch;background:var(--glass-line)}
-  .actions{display:flex;flex-direction:column;gap:6px}
+  .actions{display:flex;flex-direction:row;align-items:center;gap:6px}
   .actions button{
     font-family:'Chakra Petch',sans-serif;font-size:12px;letter-spacing:.06em;
     padding:9px 16px;border-radius:9px;cursor:pointer;border:1px solid var(--glass-line);
@@ -804,9 +804,9 @@ patternSel.addEventListener('change', ()=>{
   startPattern(name, alg);
 });
 function startPattern(name, alg){
-  queue.length = 0;               // cancel anything pending
+  // Patterns are cumulative: play from wherever the cube currently is.
+  // If something is still running, wait for it to finish, then start this one.
   const begin = ()=>{
-    buildCube();                  // patterns start from a solved cube
     const tokens = parseAlg(alg);
     renderSeq(name, tokens);
     tokens.forEach((t,idx)=>queue.push({
@@ -814,9 +814,11 @@ function startPattern(name, alg){
     }));
     pump();
   };
-  if(!animating){ begin(); }
+  if(!animating && !queue.length){ begin(); }
   else{
-    const w = setInterval(()=>{ if(!animating){ clearInterval(w); begin(); } }, 40);
+    const w = setInterval(()=>{
+      if(!animating && !queue.length){ clearInterval(w); begin(); }
+    }, 40);
   }
 }
 
