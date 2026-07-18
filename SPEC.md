@@ -247,17 +247,19 @@ Selection behavior:
 - GUIDE toggles tutorial; panel ✕ hides it; preserve step and cube.
 - CONTROLS toggles deck; hidden sequence moves down; hide GUIDE and CONTROLS for clean view.
 - TECH explains Three.js/WebGL, camera, cubies, runtime textures, live palette replacement, pivot turns, snapping, animation, queue, reversible move ledger and SOLVE engine, lights, shadows, stars, grid, themes, CSS/UI, fonts, input, and GitHub Pages hosting.
-- HELP must document every current capability, including:
-  - orbit, wheel, pinch, spin direction/off/drag pause;
-  - buttons, notation, slices, rotations, queue, HUD, keyboard;
-  - Scramble, SOLVE, and Reset, including solution cancellation rules, AUTO SOLVE sequence display, waiting-pattern clearing, history clearing, and palette retention;
-  - all 25 cumulative patterns, waiting, repeat selection, automatic control hiding, sequence states/persistence, Delay;
-  - Standard plus 20 palettes, live recoloring, state preservation, Reset persistence, reload to standard;
-  - eight guide steps, ticks, navigation, Play, close behavior;
-  - four themes;
-  - all rail actions and clean view;
-  - all overlay close methods;
-  - mobile, orientation, in-app browser, and reduced-motion behavior.
+- HELP must be a complete, scrollable user manual and document every current capability, including:
+  - a quick-start workflow covering orbit, turns, Scramble, patterns, SOLVE, and Reset;
+  - orbit, wheel, pinch, camera clamps, Spin range/direction/off state, and drag pause;
+  - buttons, notation, primes, doubles, slices, rotations, FIFO queue behavior, HUD, keyboard shortcuts, and the form-focus safeguard;
+  - Scramble, SOLVE, and Reset, including solution cancellation rules, in-flight-turn handling, AUTO SOLVE sequence display, solver timing independent of Delay, temporarily disabled actions, controls that remain available while solving, completion feedback, waiting-pattern clearing, history clearing, palette retention, and safe Reset interruption;
+  - the explicit solver guarantee for every state created inside CUBED and the limitation that no physical-cube scan, photo import, or sticker-state editor exists;
+  - all 25 cumulative patterns, queue waiting, repeat selection, automatic control hiding, sequence states/persistence, Delay behavior, and an expandable list of all pattern names;
+  - Standard plus 20 palettes, exact face-slot order, live recoloring during any state including AUTO SOLVE, state preservation, Reset persistence, reload to standard, and an expandable list of all alternate palette names;
+  - all eight guide subjects, ticks, navigation, Play, solving lockout, and close/preserve behavior;
+  - all four themes and the scene/UI elements each changes;
+  - every rail action, active-state meaning, clean-view mode, and sequence repositioning;
+  - every overlay close method and Escape behavior;
+  - mobile layout, orientation handling, in-app browser centering, high-DPI sizing, reduced-motion behavior, visible focus states, no-storage behavior, and every default restored by a page reload.
 - Opening one overlay closes the other. Close via ✕, backdrop, same rail button, or Escape. Active rail styling must match.
 
 ## 13. Responsive behavior
