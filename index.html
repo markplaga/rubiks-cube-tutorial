@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CUBED — Learn to Solve the Rubik's Cube</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --accent:#59e3ff;
+    --accent-soft:rgba(89,227,255,.16);
+    --ink:#0b0d16;
+    --glass:rgba(14,16,27,.74);
+    --glass-line:rgba(255,255,255,.09);
+    --text:#eef0f8;
+    --muted:#9aa1b6;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Sora',system-ui,sans-serif;
+    color:var(--text);
+    background:radial-gradient(120% 90% at 50% 0%, #1b2050 0%, #0b0d1f 55%, #05060f 100%);
+    overflow:hidden;
+    transition:background 1.1s ease;
+  }
+  body[data-theme="synthwave"]{background:linear-gradient(180deg,#0b021a 0%,#2a0b45 55%,#ff2e88 140%)}
+  body[data-theme="daylight"]{background:radial-gradient(120% 100% at 50% 0%, #f4f6fa 0%, #dde3ee 60%, #c3ccdd 100%)}
+  body[data-theme="ember"]{background:radial-gradient(120% 100% at 50% 10%, #3b1408 0%, #1c0805 60%, #0b0302 100%)}
+
+  body[data-theme="daylight"]{
+    --glass:rgba(255,255,255,.72);
+    --glass-line:rgba(20,30,60,.12);
+    --text:#141a2c;
+    --muted:#5b6478;
+    --ink:#ffffff;
+  }
+
+  #stage{position:fixed;inset:0;display:block;touch-action:none;cursor:grab}
+  #stage.dragging{cursor:grabbing}
+
+  /* ---------- header ---------- */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:10;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 22px;pointer-events:none;
+  }
+  header>*{pointer-events:auto}
+  .brand{display:flex;align-items:baseline;gap:12px}
+  .brand h1{
+    font-family:'Chakra Petch',sans-serif;font-weight:700;font-size:26px;
+    letter-spacing:.14em;
+  }
+  .brand h1 span{color:var(--accent)}
+  .brand small{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+
+  .themes{display:flex;gap:8px;background:var(--glass);backdrop-filter:blur(14px);
+    border:1px solid var(--glass-line);border-radius:999px;padding:6px}
+  .themes button{
+    font-family:'Chakra Petch',sans-serif;font-size:12px;letter-spacing:.08em;
+    padding:8px 14px;border-radius:999px;border:none;background:transparent;
+    color:var(--muted);cursor:pointer;transition:all .25s;
+  }
+  .themes button.active{background:var(--accent-soft);color:var(--accent)}
+  .themes button:hover{color:var(--text)}
+
+  /* ---------- tutorial panel ---------- */
+  #panel{
+    position:fixed;top:86px;right:22px;bottom:118px;width:378px;z-index:9;
+    display:flex;flex-direction:column;
+    background:var(--glass);backdrop-filter:blur(18px);
+    border:1px solid var(--glass-line);border-radius:var(--radius);
+    overflow:hidden;transition:transform .4s cubic-bezier(.2,.8,.2,1);
+  }
+  #panel.hidden{transform:translateX(calc(100% + 30px))}
+  .panel-head{
+    padding:16px 20px 12px;border-bottom:1px solid var(--glass-line);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .panel-head .step-count{
+    font-family:'Chakra Petch',sans-serif;font-size:12px;letter-spacing:.2em;
+    color:var(--accent);
+  }
+  .progress{display:flex;gap:5px}
+  .progress i{width:16px;height:4px;border-radius:2px;background:var(--glass-line);transition:background .3s}
+  .progress i.done{background:var(--accent)}
+  .panel-body{padding:18px 20px;overflow-y:auto;flex:1}
+  .panel-body::-webkit-scrollbar{width:6px}
+  .panel-body::-webkit-scrollbar-thumb{background:var(--glass-line);border-radius:3px}
+  .panel-body h2{
+    font-family:'Chakra Petch',sans-serif;font-size:21px;font-weight:600;
+    margin-bottom:10px;line-height:1.25;
+  }
+  .panel-body p{font-size:13.5px;font-weight:300;line-height:1.65;color:var(--muted);margin-bottom:12px}
+  .panel-body p strong{color:var(--text);font-weight:600}
+  .alg{
+    display:flex;flex-wrap:wrap;gap:6px;align-items:center;
+    background:rgba(0,0,0,.25);border:1px solid var(--glass-line);
+    border-radius:12px;padding:12px;margin:10px 0 14px;
+  }
+  body[data-theme="daylight"] .alg{background:rgba(20,30,60,.06)}
+  .alg .label{width:100%;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+  .alg .m{
+    font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:15px;
+    background:var(--accent-soft);color:var(--accent);
+    border-radius:8px;padding:5px 9px;min-width:34px;text-align:center;
+  }
+  .alg .play{
+    margin-left:auto;font-family:'Chakra Petch',sans-serif;font-size:12px;letter-spacing:.06em;
+    border:1px solid var(--accent);background:transparent;color:var(--accent);
+    border-radius:8px;padding:7px 13px;cursor:pointer;transition:all .2s;
+  }
+  .alg .play:hover{background:var(--accent);color:var(--ink)}
+  .panel-foot{
+    display:flex;gap:10px;padding:14px 20px;border-top:1px solid var(--glass-line);
+  }
+  .panel-foot button{
+    flex:1;font-family:'Chakra Petch',sans-serif;font-size:13px;letter-spacing:.06em;
+    padding:11px 0;border-radius:11px;cursor:pointer;transition:all .2s;
+    border:1px solid var(--glass-line);background:transparent;color:var(--text);
+  }
+  .panel-foot button:hover{border-color:var(--accent);color:var(--accent)}
+  .panel-foot button.primary{background:var(--accent);border-color:var(--accent);color:var(--ink);font-weight:600}
+  .panel-foot button.primary:hover{filter:brightness(1.12);color:var(--ink)}
+  .panel-foot button:disabled{opacity:.35;pointer-events:none}
+
+  #panelToggle{
+    position:fixed;top:86px;right:22px;z-index:8;
+    background:var(--glass);backdrop-filter:blur(14px);
+    border:1px solid var(--glass-line);border-radius:12px;
+    color:var(--text);font-family:'Chakra Petch',sans-serif;font-size:12px;
+    letter-spacing:.1em;padding:11px 16px;cursor:pointer;
+  }
+
+  /* ---------- move deck ---------- */
+  #deck{
+    position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:10;
+    display:flex;align-items:center;gap:14px;
+    background:var(--glass);backdrop-filter:blur(18px);
+    border:1px solid var(--glass-line);border-radius:16px;padding:12px 16px;
+  }
+  .moves{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+  .moves button{
+    font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:14px;
+    width:44px;height:38px;border-radius:9px;cursor:pointer;
+    border:1px solid var(--glass-line);background:transparent;color:var(--text);
+    transition:all .15s;
+  }
+  .moves button:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+  .deck-sep{width:1px;align-self:stretch;background:var(--glass-line)}
+  .actions{display:flex;flex-direction:column;gap:6px}
+  .actions button{
+    font-family:'Chakra Petch',sans-serif;font-size:12px;letter-spacing:.06em;
+    padding:9px 16px;border-radius:9px;cursor:pointer;border:1px solid var(--glass-line);
+    background:transparent;color:var(--text);transition:all .15s;
+  }
+  .actions button:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:fixed;left:50%;top:96px;transform:translateX(-50%);z-index:7;
+    font-family:'Chakra Petch',sans-serif;font-size:44px;font-weight:700;
+    color:var(--accent);opacity:0;transition:opacity .25s;
+    text-shadow:0 0 30px var(--accent-soft);pointer-events:none;
+  }
+  #hud.show{opacity:1}
+  #hint{
+    position:fixed;left:22px;bottom:24px;z-index:6;max-width:210px;
+    font-size:11px;letter-spacing:.05em;line-height:1.7;color:var(--muted);
+  }
+  #hint b{color:var(--text);font-weight:600}
+
+  @media (max-width:880px){
+    #panel{left:12px;right:12px;width:auto;top:auto;bottom:96px;max-height:46vh}
+    #panel.hidden{transform:translateY(calc(100% + 120px))}
+    #panelToggle{top:auto;bottom:96px;right:12px}
+    #hint{display:none}
+    #deck{bottom:10px;padding:9px 10px;gap:9px}
+    .moves button{width:38px;height:34px;font-size:13px}
+    header{padding:12px 14px}
+    .brand small{display:none}
+    .themes button{padding:7px 9px;font-size:11px}
+  }
+</style>
+</head>
+<body data-theme="nebula">
+
+<canvas id="stage"></canvas>
+
+<header>
+  <div class="brand">
+    <h1>CU<span>B</span>ED</h1>
+    <small>a hands-on solving guide</small>
+  </div>
+  <nav class="themes" id="themes">
+    <button data-t="nebula" class="active">Nebula</button>
+    <button data-t="synthwave">Synthwave</button>
+    <button data-t="daylight">Daylight</button>
+    <button data-t="ember">Ember</button>
+  </nav>
+</header>
+
+<div id="hud"></div>
+
+<button id="panelToggle" style="display:none">GUIDE ▸</button>
+
+<aside id="panel">
+  <div class="panel-head">
+    <span class="step-count" id="stepCount">STEP 1 / 8</span>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="progress" id="progress"></div>
+      <button id="panelClose" title="Hide guide" style="border:none;background:transparent;color:var(--muted);font-size:16px;cursor:pointer;line-height:1">✕</button>
+    </div>
+  </div>
+  <div class="panel-body" id="stepBody"></div>
+  <div class="panel-foot">
+    <button id="prevBtn">◂ Back</button>
+    <button id="nextBtn" class="primary">Next ▸</button>
+  </div>
+</aside>
+
+<div id="deck">
+  <div class="moves" id="moveBtns"></div>
+  <div class="deck-sep"></div>
+  <div class="actions">
+    <button id="scrambleBtn">SCRAMBLE</button>
+    <button id="resetBtn">RESET</button>
+  </div>
+</div>
+
+<div id="hint">
+  <b>Drag</b> anywhere to orbit the cube · <b>Scroll</b> to zoom · Tap a move button to turn a face
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   SCENE
+============================================================ */
+const canvas = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
+
+let orbit = { theta: 0.72, phi: 1.12, dist: 10.5 };
+function applyCamera(){
+  orbit.phi = Math.max(0.25, Math.min(Math.PI-0.35, orbit.phi));
+  orbit.dist = Math.max(6, Math.min(16, orbit.dist));
+  camera.position.set(
+    orbit.dist*Math.sin(orbit.phi)*Math.sin(orbit.theta),
+    orbit.dist*Math.cos(orbit.phi),
+    orbit.dist*Math.sin(orbit.phi)*Math.cos(orbit.theta)
+  );
+  camera.lookAt(0,0,0);
+}
+
+/* lights (retuned per theme) */
+const hemi = new THREE.HemisphereLight(0xbfd6ff, 0x10121f, 0.85); scene.add(hemi);
+const key  = new THREE.DirectionalLight(0xffffff, 0.95);
+key.position.set(6,9,6); key.castShadow = true;
+key.shadow.mapSize.set(1024,1024);
+key.shadow.camera.left=-6; key.shadow.camera.right=6;
+key.shadow.camera.top=6; key.shadow.camera.bottom=-6;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x59e3ff, 0.55); rim.position.set(-7,3,-6); scene.add(rim);
+const amb = new THREE.AmbientLight(0xffffff, 0.22); scene.add(amb);
+
+/* ground shadow */
+const shadowMat = new THREE.ShadowMaterial({opacity:0.22});
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(60,60), shadowMat);
+ground.rotation.x = -Math.PI/2; ground.position.y = -3.1; ground.receiveShadow = true;
+scene.add(ground);
+
+/* stars (nebula) */
+const starGeo = new THREE.BufferGeometry();
+const starPos = new Float32Array(900*3);
+for(let i=0;i<900;i++){
+  const r = 40 + Math.random()*50;
+  const t = Math.random()*Math.PI*2, p = Math.acos(2*Math.random()-1);
+  starPos[i*3]   = r*Math.sin(p)*Math.cos(t);
+  starPos[i*3+1] = r*Math.cos(p)*0.7 + 6;
+  starPos[i*3+2] = r*Math.sin(p)*Math.sin(t);
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos,3));
+const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({color:0xaecdff,size:0.16,transparent:true,opacity:0.9}));
+scene.add(stars);
+
+/* synthwave grid */
+const grid = new THREE.GridHelper(120, 60, 0xff2e88, 0x8a2be2);
+grid.position.y = -3.1;
+grid.material.transparent = true; grid.material.opacity = 0;
+scene.add(grid);
+
+/* ============================================================
+   THE CUBE
+============================================================ */
+const SP = 1.06;              // spacing between cubie centers
+const cubeGroup = new THREE.Group();
+scene.add(cubeGroup);
+const pivot = new THREE.Group(); scene.add(pivot);
+
+const COLORS = { U:0xf6f7fb, D:0xffd500, F:0x00b74a, B:0x0057d8, R:0xe0271b, L:0xff7a00 };
+const stickerCache = {};
+function stickerTexture(hex){
+  if(stickerCache[hex]) return stickerCache[hex];
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#0a0b10'; g.fillRect(0,0,256,256);
+  const col = '#'+hex.toString(16).padStart(6,'0');
+  const grad = g.createLinearGradient(30,30,226,226);
+  grad.addColorStop(0, col);
+  grad.addColorStop(1, shade(col,-18));
+  roundRect(g, 22, 22, 212, 212, 42);
+  g.fillStyle = grad; g.fill();
+  // soft top sheen
+  const sheen = g.createLinearGradient(0,22,0,120);
+  sheen.addColorStop(0,'rgba(255,255,255,.30)');
+  sheen.addColorStop(1,'rgba(255,255,255,0)');
+  roundRect(g, 22, 22, 212, 100, 42);
+  g.fillStyle = sheen; g.fill();
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  stickerCache[hex] = tex;
+  return tex;
+}
+function roundRect(g,x,y,w,h,r){
+  g.beginPath();
+  g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
+  g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
+}
+function shade(col,amt){
+  const n = parseInt(col.slice(1),16);
+  let r=(n>>16)+amt, gg=((n>>8)&255)+amt, b=(n&255)+amt;
+  r=Math.max(0,Math.min(255,r)); gg=Math.max(0,Math.min(255,gg)); b=Math.max(0,Math.min(255,b));
+  return '#'+(r<<16|gg<<8|b).toString(16).padStart(6,'0');
+}
+const darkMat = new THREE.MeshStandardMaterial({color:0x0a0b10, roughness:0.55, metalness:0.15});
+function faceMat(hex){
+  return new THREE.MeshStandardMaterial({map:stickerTexture(hex), roughness:0.32, metalness:0.05});
+}
+
+const cubies = [];
+function buildCube(){
+  // clear
+  while(cubeGroup.children.length) cubeGroup.remove(cubeGroup.children[0]);
+  cubies.length = 0;
+  const geo = new THREE.BoxGeometry(0.97,0.97,0.97);
+  for(let x=-1;x<=1;x++) for(let y=-1;y<=1;y++) for(let z=-1;z<=1;z++){
+    // material order: +x,-x,+y,-y,+z,-z
+    const mats = [
+      x=== 1 ? faceMat(COLORS.R) : darkMat,
+      x===-1 ? faceMat(COLORS.L) : darkMat,
+      y=== 1 ? faceMat(COLORS.U) : darkMat,
+      y===-1 ? faceMat(COLORS.D) : darkMat,
+      z=== 1 ? faceMat(COLORS.F) : darkMat,
+      z===-1 ? faceMat(COLORS.B) : darkMat,
+    ];
+    const m = new THREE.Mesh(geo, mats);
+    m.position.set(x*SP, y*SP, z*SP);
+    m.castShadow = true;
+    cubeGroup.add(m);
+    cubies.push(m);
+  }
+}
+buildCube();
+
+/* ============================================================
+   MOVE ENGINE
+============================================================ */
+const AXES = { x:new THREE.Vector3(1,0,0), y:new THREE.Vector3(0,1,0), z:new THREE.Vector3(0,0,1) };
+const MOVES = {
+  U:{axis:'y',layer: 1,dir:-1}, D:{axis:'y',layer:-1,dir: 1},
+  R:{axis:'x',layer: 1,dir:-1}, L:{axis:'x',layer:-1,dir: 1},
+  F:{axis:'z',layer: 1,dir:-1}, B:{axis:'z',layer:-1,dir: 1},
+};
+let queue = [], animating = false, moveSpeed = 260;
+const hud = document.getElementById('hud');
+let hudTimer = null;
+
+function enqueue(tokens, speed){
+  queue.push(...tokens.map(t=>({t, speed: speed||moveSpeed})));
+  pump();
+}
+function parseAlg(str){
+  const out = [];
+  str.trim().split(/\s+/).forEach(tk=>{
+    if(!tk) return;
+    const face = tk[0];
+    if(tk.includes('2')){ out.push(face, face); }
+    else if(tk.includes("'")){ out.push(face+"'"); }
+    else out.push(face);
+  });
+  return out;
+}
+function pump(){
+  if(animating || !queue.length) return;
+  const {t, speed} = queue.shift();
+  doMove(t, speed);
+}
+function showHud(t){
+  hud.textContent = t;
+  hud.classList.add('show');
+  clearTimeout(hudTimer);
+  hudTimer = setTimeout(()=>hud.classList.remove('show'), 500);
+}
+function doMove(token, speed){
+  const face = token[0], prime = token.includes("'");
+  const def = MOVES[face];
+  if(!def) { pump(); return; }
+  animating = true;
+  showHud(token);
+  pivot.rotation.set(0,0,0);
+  pivot.updateMatrixWorld();
+  const picked = cubies.filter(c=>Math.abs(c.position[def.axis] - def.layer*SP) < 0.4);
+  picked.forEach(c=>pivot.attach(c));
+  const target = (Math.PI/2) * def.dir * (prime?-1:1);
+  const start = performance.now();
+  function step(now){
+    let k = Math.min(1,(now-start)/speed);
+    const e = 1 - Math.pow(1-k, 3); // ease-out cubic
+    pivot.rotation[def.axis] = target*e;
+    if(k<1){ requestAnimationFrame(step); }
+    else{
+      picked.forEach(c=>{
+        cubeGroup.attach(c);
+        c.position.set(snap(c.position.x), snap(c.position.y), snap(c.position.z));
+        const eu = new THREE.Euler().setFromQuaternion(c.quaternion);
+        eu.x = snapAngle(eu.x); eu.y = snapAngle(eu.y); eu.z = snapAngle(eu.z);
+        c.quaternion.setFromEuler(eu);
+      });
+      animating = false;
+      pump();
+    }
+  }
+  requestAnimationFrame(step);
+}
+const snap = v => Math.round(v/SP)*SP;
+const snapAngle = a => Math.round(a/(Math.PI/2))*(Math.PI/2);
+
+function scramble(){
+  const faces = Object.keys(MOVES);
+  const seq = [];
+  let last = '';
+  for(let i=0;i<22;i++){
+    let f; do{ f = faces[Math.floor(Math.random()*6)]; } while(f===last);
+    last = f;
+    seq.push(Math.random()<0.5 ? f : f+"'");
+  }
+  enqueue(seq, 130);
+}
+function reset(){
+  queue.length = 0;
+  // wait for current animation to end, then rebuild
+  const wait = setInterval(()=>{
+    if(!animating){ clearInterval(wait); buildCube(); }
+  }, 40);
+}
+
+/* ============================================================
+   INPUT — orbit + zoom
+============================================================ */
+let dragging = false, lastX=0, lastY=0;
+canvas.addEventListener('pointerdown', e=>{
+  dragging = true; lastX=e.clientX; lastY=e.clientY;
+  canvas.classList.add('dragging');
+  canvas.setPointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointermove', e=>{
+  if(!dragging) return;
+  orbit.theta -= (e.clientX-lastX)*0.0055;
+  orbit.phi   -= (e.clientY-lastY)*0.0055;
+  lastX=e.clientX; lastY=e.clientY;
+});
+canvas.addEventListener('pointerup', ()=>{ dragging=false; canvas.classList.remove('dragging'); });
+canvas.addEventListener('wheel', e=>{ e.preventDefault(); orbit.dist += e.deltaY*0.006; }, {passive:false});
+
+/* pinch zoom */
+let pinchDist = null;
+canvas.addEventListener('touchmove', e=>{
+  if(e.touches.length===2){
+    const d = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+    if(pinchDist!==null) orbit.dist -= (d-pinchDist)*0.02;
+    pinchDist = d;
+  }
+},{passive:true});
+canvas.addEventListener('touchend', ()=>{ pinchDist=null; });
+
+/* ============================================================
+   THEMES
+============================================================ */
+const THEMES = {
+  nebula:{ accent:'#59e3ff', soft:'rgba(89,227,255,.16)',
+    hemi:[0xbfd6ff,0x10121f,0.85], key:[0xffffff,0.95], rim:[0x59e3ff,0.6], amb:0.22,
+    stars:0.9, grid:0, shadow:0.22 },
+  synthwave:{ accent:'#ff4fa3', soft:'rgba(255,79,163,.18)',
+    hemi:[0xff9ad5,0x1a0530,0.7], key:[0xffd1ec,0.85], rim:[0x00e5ff,0.85], amb:0.2,
+    stars:0.35, grid:0.55, shadow:0.3 },
+  daylight:{ accent:'#2456e6', soft:'rgba(36,86,230,.12)',
+    hemi:[0xffffff,0xb9c2d6,1.0], key:[0xfff6e8,1.05], rim:[0x9db7ff,0.35], amb:0.5,
+    stars:0, grid:0, shadow:0.16 },
+  ember:{ accent:'#ffb54d', soft:'rgba(255,181,77,.16)',
+    hemi:[0xffd2a1,0x2a0d05,0.75], key:[0xffbe8a,1.05], rim:[0xff5a2b,0.7], amb:0.18,
+    stars:0.25, grid:0, shadow:0.34 },
+};
+let themeTween = null;
+function setTheme(name){
+  const t = THEMES[name];
+  document.body.dataset.theme = name;
+  document.documentElement.style.setProperty('--accent', t.accent);
+  document.documentElement.style.setProperty('--accent-soft', t.soft);
+  document.querySelectorAll('#themes button').forEach(b=>b.classList.toggle('active', b.dataset.t===name));
+
+  // tween scene lighting toward targets
+  const from = {
+    hemiC: hemi.color.clone(), hemiG: hemi.groundColor.clone(), hemiI: hemi.intensity,
+    keyC: key.color.clone(), keyI: key.intensity,
+    rimC: rim.color.clone(), rimI: rim.intensity,
+    ambI: amb.intensity, stars: stars.material.opacity, grid: grid.material.opacity,
+    shadow: shadowMat.opacity
+  };
+  const to = {
+    hemiC: new THREE.Color(t.hemi[0]), hemiG: new THREE.Color(t.hemi[1]), hemiI: t.hemi[2],
+    keyC: new THREE.Color(t.key[0]), keyI: t.key[1],
+    rimC: new THREE.Color(t.rim[0]), rimI: t.rim[1],
+    ambI: t.amb, stars: t.stars, grid: t.grid, shadow: t.shadow
+  };
+  const start = performance.now(), dur = 1000;
+  cancelAnimationFrame(themeTween);
+  function tick(now){
+    const k = Math.min(1,(now-start)/dur), e = k*(2-k);
+    hemi.color.lerpColors(from.hemiC, to.hemiC, e);
+    hemi.groundColor.lerpColors(from.hemiG, to.hemiG, e);
+    hemi.intensity = from.hemiI+(to.hemiI-from.hemiI)*e;
+    key.color.lerpColors(from.keyC, to.keyC, e);
+    key.intensity = from.keyI+(to.keyI-from.keyI)*e;
+    rim.color.lerpColors(from.rimC, to.rimC, e);
+    rim.intensity = from.rimI+(to.rimI-from.rimI)*e;
+    amb.intensity = from.ambI+(to.ambI-from.ambI)*e;
+    stars.material.opacity = from.stars+(to.stars-from.stars)*e;
+    grid.material.opacity = from.grid+(to.grid-from.grid)*e;
+    shadowMat.opacity = from.shadow+(to.shadow-from.shadow)*e;
+    if(k<1) themeTween = requestAnimationFrame(tick);
+  }
+  themeTween = requestAnimationFrame(tick);
+}
+document.getElementById('themes').addEventListener('click', e=>{
+  if(e.target.dataset.t) setTheme(e.target.dataset.t);
+});
+
+/* ============================================================
+   TUTORIAL
+============================================================ */
+const STEPS = [
+  {
+    title:"Meet your cube",
+    html:`<p>A Rubik's Cube has <strong>6 centers, 12 edges, and 8 corners</strong>. The centers never move relative to each other — the white center is always opposite yellow, green opposite blue, red opposite orange. Centers define what color each face must become.</p>
+    <p>Moves are written in letters: <strong>U</strong>p, <strong>D</strong>own, <strong>L</strong>eft, <strong>R</strong>ight, <strong>F</strong>ront, <strong>B</strong>ack. A plain letter means turn that face <strong>clockwise</strong> (as if you were looking straight at it). An apostrophe (<strong>R'</strong>, said "R prime") means counter-clockwise.</p>
+    <p>Try it — press the buttons below the cube, or play this little warm-up:</p>`,
+    alg:"R U R' U'", algLabel:"Warm-up (do it 6× and the cube returns to solved!)"
+  },
+  {
+    title:"The white cross",
+    html:`<p>Hold the cube with the <strong>white center on top</strong>. Your goal: place the 4 white edge pieces around it so each edge's <em>side color</em> matches the center below it — white-green edge between the white and green centers, and so on.</p>
+    <p><strong>The daisy trick:</strong> first bring all 4 white edges around the <em>yellow</em> center (it looks like a daisy). Then, for each petal, twist the top until the edge's side color sits over its matching center, and turn that face twice.</p>
+    <p>This step is intuition, not memorization — scramble the cube and hunt the white edges. It's the best way to learn how pieces travel.</p>`,
+    alg:"F2", algLabel:"Dropping a matched petal down into place"
+  },
+  {
+    title:"White corners",
+    html:`<p>Keep white on top. Find a white corner in the <strong>bottom layer</strong> and turn the bottom until it sits <strong>directly below the slot it belongs in</strong> (match its three colors to the surrounding centers).</p>
+    <p>Hold the cube so that slot is at the <strong>front-right</strong>, then repeat this 4-move trick until the corner pops in, white facing up:</p>`,
+    alg:"R' D' R D", algLabel:"The corner trick — repeat until solved (1–5 times)",
+    extra:`<p>If a white corner is stuck in the top layer facing the wrong way, do the trick once to drop it out, then re-position and repeat. When all 4 corners are in, the whole first layer is done.</p>`
+  },
+  {
+    title:"Middle layer edges",
+    html:`<p>Flip the cube over — <strong>white now faces down</strong>, yellow up. Find an edge in the top layer with <strong>no yellow</strong> on it. Turn the top until its front color matches a center, making a vertical bar. Now check the top color of that edge:</p>
+    <p>If it needs to go <strong>right</strong>:</p>`,
+    alg:"U R U' R' U' F' U F", algLabel:"Send the edge to the right slot",
+    extra:`<p>If it needs to go <strong>left</strong>:</p>
+    <div class="alg"><span class="label">Send the edge to the left slot</span><span class="m">U'</span><span class="m">L'</span><span class="m">U</span><span class="m">L</span><span class="m">U</span><span class="m">F</span><span class="m">U'</span><span class="m">F'</span><button class="play" data-alg="U' L' U L U F U' F'">▶ Play</button></div>
+    <p>An edge sitting in a slot the wrong way? Run either algorithm to eject it into the top layer, then place it properly.</p>`
+  },
+  {
+    title:"The yellow cross",
+    html:`<p>Ignore corners for now — you only want a yellow <strong>+</strong> on top. You'll currently see one of four patterns: a dot, an L-shape, a line, or the cross itself.</p>
+    <p>Hold any <strong>L in the back-left</strong> or a <strong>line horizontal</strong>, and run:</p>`,
+    alg:"F R U R' U' F'", algLabel:"Dot → L → line → cross (repeat as needed)",
+    extra:`<p>From a dot you'll run it up to three times. Each run advances the pattern one stage. Don't worry about which yellow edges line up with side centers yet — that's next.</p>`
+  },
+  {
+    title:"Line up the yellow edges",
+    html:`<p>Turn the top face until <strong>at least two</strong> yellow edges match their side centers. If two <em>adjacent</em> edges match, hold them at the <strong>back and right</strong>. If two opposite edges match, hold either way. Then run:</p>`,
+    alg:"R U R' U R U2 R'", algLabel:"Cycle the top edges (the \"Sune\")",
+    extra:`<p>Re-check the tops after each run and repeat until all four edges match their centers. The top face may look chaotic mid-way — that's normal.</p>`
+  },
+  {
+    title:"Place the yellow corners",
+    html:`<p>Now put each yellow corner in its correct <strong>location</strong> (its three colors match the three surrounding centers — twisted is fine for now).</p>
+    <p>Find one corner already in the right spot and hold it at the <strong>front-right</strong>. If none are correct, run the algorithm once from anywhere and one will be. Then repeat until all four are placed:</p>`,
+    alg:"U R U' L' U R' U' L", algLabel:"Cycle the other three corners"
+  },
+  {
+    title:"Twist the last corners",
+    html:`<p>The finale. Hold the cube with an <strong>unsolved yellow corner at the front-right-top</strong>. Repeat the same trick from step 3 until that corner's yellow faces up:</p>`,
+    alg:"R' D' R D", algLabel:"Repeat 2 or 4 times per corner",
+    extra:`<p><strong>Important:</strong> when the corner is done, do <strong>not</strong> rotate the whole cube — just turn the <strong>top face (U)</strong> to bring the next unsolved corner to the front-right, and repeat. The cube will look completely broken until the very last twist… and then, all at once, it's solved. Congratulations, cuber. 🎉</p>`
+  },
+];
+
+let stepIndex = 0;
+const stepBody = document.getElementById('stepBody');
+const stepCount = document.getElementById('stepCount');
+const progress = document.getElementById('progress');
+STEPS.forEach(()=>{ const i=document.createElement('i'); progress.appendChild(i); });
+
+function algBlock(alg,label){
+  const chips = parseAlgDisplay(alg).map(m=>`<span class="m">${m}</span>`).join('');
+  return `<div class="alg"><span class="label">${label}</span>${chips}<button class="play" data-alg="${alg}">▶ Play</button></div>`;
+}
+function parseAlgDisplay(str){ return str.trim().split(/\s+/); }
+
+function renderStep(){
+  const s = STEPS[stepIndex];
+  stepCount.textContent = `STEP ${stepIndex+1} / ${STEPS.length}`;
+  let html = `<h2>${s.title}</h2>${s.html}`;
+  if(s.alg) html += algBlock(s.alg, s.algLabel||"Algorithm");
+  if(s.extra) html += s.extra;
+  stepBody.innerHTML = html;
+  stepBody.scrollTop = 0;
+  progress.querySelectorAll('i').forEach((el,i)=>el.classList.toggle('done', i<=stepIndex));
+  document.getElementById('prevBtn').disabled = stepIndex===0;
+  document.getElementById('nextBtn').textContent = stepIndex===STEPS.length-1 ? "Start over" : "Next ▸";
+}
+document.getElementById('prevBtn').addEventListener('click', ()=>{ if(stepIndex>0){stepIndex--; renderStep();} });
+document.getElementById('nextBtn').addEventListener('click', ()=>{
+  stepIndex = (stepIndex+1) % STEPS.length; renderStep();
+});
+stepBody.addEventListener('click', e=>{
+  const alg = e.target.dataset && e.target.dataset.alg;
+  if(alg) enqueue(parseAlg(alg));
+});
+renderStep();
+
+/* panel toggle (mobile / focus mode) */
+const panel = document.getElementById('panel');
+const panelToggle = document.getElementById('panelToggle');
+function refreshToggle(){
+  panelToggle.style.display = panel.classList.contains('hidden') ? 'block' : 'none';
+}
+panelToggle.addEventListener('click', ()=>{ panel.classList.remove('hidden'); refreshToggle(); });
+document.getElementById('panelClose').addEventListener('click', ()=>{ panel.classList.add('hidden'); refreshToggle(); });
+// small close affordance: swipe/esc
+window.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ panel.classList.toggle('hidden'); refreshToggle(); }
+});
+
+/* ============================================================
+   MOVE BUTTONS
+============================================================ */
+const order = ["U","U'","L","L'","F","F'","R","R'","B","B'","D","D'"];
+const moveBtns = document.getElementById('moveBtns');
+order.forEach(t=>{
+  const b = document.createElement('button');
+  b.textContent = t;
+  b.addEventListener('click', ()=>enqueue([t]));
+  moveBtns.appendChild(b);
+});
+document.getElementById('scrambleBtn').addEventListener('click', scramble);
+document.getElementById('resetBtn').addEventListener('click', reset);
+
+/* keyboard moves */
+window.addEventListener('keydown', e=>{
+  const k = e.key.toUpperCase();
+  if("UDLRFB".includes(k) && !e.metaKey && !e.ctrlKey){
+    enqueue([e.shiftKey ? k+"'" : k]);
+  }
+});
+
+/* ============================================================
+   RENDER LOOP
+============================================================ */
+function resize(){
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w,h,false);
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+
+let t0 = performance.now();
+function loop(now){
+  const dt = (now-t0)/1000; t0 = now;
+  // gentle idle drift when not dragging
+  if(!dragging && !animating && !queue.length) orbit.theta += dt*0.06;
+  stars.rotation.y += dt*0.008;
+  applyCamera();
+  renderer.render(scene, camera);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+setTheme('nebula');
+
+/* respect reduced motion: slow idle + faster snaps */
+if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+  moveSpeed = 80;
+}
+</script>
+</body>
+</html>
