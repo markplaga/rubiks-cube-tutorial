@@ -1,108 +1,190 @@
-# Build Prompt: "CUBED" — Interactive 3D Rubik's Cube Tutorial Web App
+# CUBED — Interactive 3D Rubik’s Cube Tutorial Web App
 
-## The Prompt (paste this, with the rest of this document attached)
+## Status
 
-Build me a complete, single-file HTML web application called **CUBED** — an interactive 3D Rubik's Cube tutorial site — exactly to the specification below. The entire app must be one `index.html` file (inline CSS and JavaScript) suitable for hosting on GitHub Pages. Do not use any build tools, frameworks, or bundlers. Implement every feature in this document; the Acceptance Checklist at the end is the definition of done. Where the spec gives exact values (colors, algorithms, slider ranges, theme parameters), use them exactly.
+This is the canonical specification for the current CUBED application. It includes the original build requirements plus later additions: 20 alternate cube palettes, live recoloring, automatic control hiding after pattern selection, comprehensive Help content, and GitHub Pages publishing.
 
----
+The application itself must remain a single `index.html` file with inline CSS and JavaScript. Repository support files such as `SPEC.md` and `.nojekyll` are allowed.
 
 ## 1. Overview
 
-CUBED is a full-screen web page centered on a live, animated 3D Rubik's Cube. Users can orbit and zoom around the cube, turn its faces with buttons or keyboard, scramble and reset it, follow an 8-step beginner solving tutorial with playable algorithms, play 25 classic decorative patterns from a dropdown with an adjustable delay between moves, control an auto-spin, switch between four visual environment themes, and open Tech and Help information overlays. It must work beautifully on both desktop and mobile — including inside in-app browsers (e.g., Facebook Messenger's WebView).
+CUBED is a full-screen, responsive Three.js Rubik’s Cube tutorial. Users can orbit and zoom, turn faces with buttons or keyboard, scramble and reset, follow an eight-step beginner guide with playable algorithms, play 25 cumulative decorative patterns, adjust pattern delay and camera spin, switch among four visual environments, change all six cube colors through named palettes, hide interface panels for a clean view, and open Tech and Help overlays.
 
-## 2. Technology constraints
+It must work on desktop, mobile, high-DPI devices, orientation changes, and in-app browsers.
 
-- **One file**: all HTML, CSS, and JS inline in `index.html`.
-- **Three.js r128** loaded from cdnjs: `https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js`. Do NOT use OrbitControls or any Three.js examples/addons — write custom camera controls.
-- **Google Fonts**: `Chakra Petch` (weights 500/600/700) for display/notation/UI labels and `Sora` (300/400/600) for body text, with sans-serif fallbacks.
-- No localStorage/sessionStorage. No external images — all textures generated at runtime via canvas.
-- WebGL renderer with `alpha: true` (transparent clear) so a CSS gradient on `<body>` provides the backdrop. Antialiasing on. `setPixelRatio(min(devicePixelRatio, 2))`. Shadow mapping enabled with `PCFSoftShadowMap`.
+## 2. Technology
 
-## 3. Page layout
+- One application file: `index.html`, with all CSS and JavaScript inline.
+- Three.js r128 from `https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js`.
+- No OrbitControls, examples, add-ons, frameworks, bundlers, or build step.
+- Google Fonts: Chakra Petch 500/600/700 and Sora 300/400/600, with sans-serif fallbacks.
+- No `localStorage` or `sessionStorage`.
+- No external images; generate sticker textures with canvas.
+- Renderer: `alpha: true`, antialiasing, transparent clear, pixel ratio capped at 2, shadows enabled, `PCFSoftShadowMap`.
 
-- **Full-screen canvas** (`#stage`): `position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none;` cursor `grab`, `grabbing` while dragging.
-- **Header** (top, fixed): left — brand "CUBED" in Chakra Petch 700, letter-spaced, with the letter "B" in the accent color, plus a small uppercase tagline "a hands-on solving guide" (hidden on mobile). Right — theme switcher pills: Nebula, Synthwave, Daylight, Ember (active pill highlighted in accent).
-- **Right-side button rail** (`#rail`, fixed under the header on the right): four stacked pill buttons — **GUIDE**, **CONTROLS**, **TECH**, **HELP**. Each lights up in the accent color when its target is visible/open.
-- **Tutorial panel** (`#panel`): desktop — fixed right side, width 378px, sitting to the LEFT of the rail (right offset ≈ 134px), spanning from below the header to above the deck; frosted-glass card with rounded corners. Mobile — becomes a bottom sheet (left/right 12px, max-height 46vh). Slides off-screen with a smooth transform when hidden.
-- **Control deck** (`#deck`, fixed bottom-center): a frosted-glass bar containing, left to right with thin vertical separators: (a) a 6×2 grid of the twelve move buttons U U' L L' F F' / R R' B B' D D'; (b) SCRAMBLE and RESET buttons side by side in one row; (c) a "patterns" column with the pattern dropdown on top and two labeled slider rows beneath (Delay, Spin). On mobile the deck wraps: the patterns column moves to the top at full width (select full-width, the two slider rows side by side at ~45% each), move buttons shrink.
-- **Sequence readout** (`#seq`): fixed, centered horizontally, floating just above the deck. Hidden by default.
-- **Move HUD** (`#hud`): fixed top-center; flashes the current move token (e.g., `R'`, `U2`, `M2`) in large Chakra Petch accent-colored text with a soft glow for ~0.5s per move.
-- **Hint** (bottom-left, desktop only): small muted text — "**Drag** anywhere to orbit the cube · **Scroll** to zoom · Tap a move button to turn a face".
-- **Overlays**: two full-screen modal overlays (Tech, Help) — dimmed blurred backdrop, centered scrollable glass "sheet" max-width 720px, max-height 84vh, with a ✕ close button.
+## 3. Interface
 
-Aesthetic: dark glassmorphism — translucent panels (`backdrop-filter: blur`), 1px subtle borders, rounded corners (~12–20px), muted secondary text, one accent color that changes with the theme via CSS custom properties (`--accent`, `--accent-soft`, `--glass`, `--text`, `--muted`, etc.). The Daylight theme flips the UI to light glass with dark text.
+- `#stage`: fixed full-screen canvas, CSS-sized at 100% width/height, `touch-action:none`, grab/grabbing cursor.
+- Header: CUBED brand with accented B, mobile-hidden tagline, and Nebula/Synthwave/Daylight/Ember pills.
+- Rail: GUIDE, CONTROLS, TECH, HELP; active styling must reflect state.
+- Guide panel: desktop right-side glass card; mobile bottom sheet; smooth hide/show.
+- Control deck:
+  - Twelve move buttons: `U U' L L' F F' R R' B B' D D'`.
+  - SCRAMBLE and RESET.
+  - Pattern Gallery and Color Palette dropdowns side by side.
+  - Delay and Spin sliders.
+- `#seq`: pattern name and move-chip readout above the deck; moves down when controls are hidden.
+- `#hud`: top-center current-move flash for about 0.5 seconds.
+- Desktop hint: drag to orbit, scroll to zoom, tap a move button.
+- Tech and Help: full-screen modal overlays with dimmed backdrop, scrollable glass sheet, and ✕.
+- Dark glassmorphism by default; Daylight uses light glass and dark text.
 
-## 4. The 3D scene
+## 4. Scene and camera
 
-- **Camera**: PerspectiveCamera, FOV 38, looking at the origin. Position derived from spherical coordinates `{theta, phi, dist}`; initial `theta ≈ 0.72, phi ≈ 1.12, dist ≈ 10.5`. Clamp `phi` to [0.25, π−0.35] and `dist` to [6, 16].
-- **Custom orbit controls** via Pointer Events: pointerdown/move/up drag rotates theta/phi (~0.0055 rad per pixel). Mouse wheel zooms (`dist += deltaY * 0.006`, preventDefault). Two-finger touch pinch zooms.
-- **Lights**: HemisphereLight + directional key light (position ~(6,9,6), casts a 1024px shadow map with a tight ortho frustum) + colored rim DirectionalLight from behind (~(−7,3,−6)) + low AmbientLight. All colors/intensities are theme-driven (see §8).
-- **Ground shadow**: a large plane at y ≈ −3.1 with `ShadowMaterial` (opacity theme-driven) to catch the key light's soft shadow.
-- **Starfield**: ~900 points on a large random spherical shell (biased upward), small size, transparent; opacity theme-driven; slowly rotates (~0.008 rad/s).
-- **Synthwave grid**: `GridHelper(120, 60)` in magenta/purple at y = −3.1, transparent; opacity theme-driven (0 except in Synthwave).
+- Perspective camera, FOV 38, looking at origin.
+- Initial spherical state approximately `theta=.72`, `phi=1.12`, `dist=10.5`.
+- Clamp phi to `[.25, π-.35]` and distance to `[6,16]`.
+- Pointer drag changes theta/phi about `.0055` radians per pixel.
+- Wheel zoom: `dist += deltaY * .006`, with `preventDefault()`.
+- Two-finger pinch zoom.
+- Hemisphere, key directional, rim directional, and ambient lights.
+- Key near `(6,9,6)`, 1024 shadow map; rim near `(-7,3,-6)`.
+- Shadow plane at approximately `y=-3.1`.
+- About 900 star points, slowly rotating at about `.008 rad/s`.
+- `GridHelper(120,60)` at `y=-3.1`, visible only in Synthwave.
 
-### Critical sizing requirement (hard-won lesson — do not skip)
-The canvas must be sized by CSS (`width:100%; height:100%`) and the renderer buffer must be set with `renderer.setSize(w, h, false)` (never letting Three.js write inline style sizes). Read `canvas.clientWidth/clientHeight` (fallback `window.innerWidth/Height`). Re-check the size **every animation frame** and on `resize`, `orientationchange` (delayed ~200ms), and `visualViewport` resize events, resizing the buffer and camera aspect only when it changed. Without this, high-DPI phones and in-app browsers (Messenger WebView) render the canvas at 2× intrinsic size and the cube appears pushed off into the bottom-right corner.
+### Critical sizing
 
-## 5. The cube
+CSS controls displayed canvas size. Use `renderer.setSize(w,h,false)`. Read `stage.clientWidth/clientHeight` with viewport fallbacks. Recheck every render frame and on `resize`, delayed `orientationchange`, and `visualViewport.resize`. Update buffer and camera only when dimensions change.
 
-- **27 cubies**: `BoxGeometry(0.97)` meshes on a 3×3×3 grid with spacing `SP = 1.06` between centers (the gap creates the black grid lines). All cubies live in a `cubeGroup` at the origin; all cast shadows.
-- **Sticker colors** (standard scheme): Up white `0xf6f7fb`, Down yellow `0xffd500`, Front green `0x00b74a`, Back blue `0x0057d8`, Right red `0xe0271b`, Left orange `0xff7a00`.
-- **Sticker textures**: generated once per color on a 256×256 canvas — near-black background (`#0a0b10`), an inset rounded-rectangle (≈22px inset, ≈42px radius) filled with a diagonal gradient from the color to a slightly darker shade, plus a soft white sheen gradient across the top half. Used as `CanvasTexture` on `MeshStandardMaterial` (roughness ≈ 0.32). Interior faces use a plain dark standard material. Assign per-face materials in Three.js order (+x, −x, +y, −y, +z, −z) based on the cubie's grid position — only outward faces get stickers.
-- `buildCube()` clears and rebuilds all 27 cubies in the solved state (this is what RESET calls).
+## 5. Cube and stickers
 
-## 6. Move engine
+- 27 `BoxGeometry(.97)` cubies on a 3×3×3 grid.
+- Center spacing `SP=1.06`.
+- All cubies belong to `cubeGroup` and cast shadows.
+- Standard slots:
+  - U/white `#F6F7FB`
+  - D/yellow `#FFD500`
+  - B/blue `#0057D8`
+  - F/green `#00B74A`
+  - R/red `#E0271B`
+  - L/orange `#FF7A00`
+- Sticker texture: 256×256 runtime canvas, `#0A0B10` surround, rounded inset, diagonal color shading, top sheen; MeshStandardMaterial roughness about .32.
+- Only outward faces get sticker materials, using Three.js face order `+x,-x,+y,-y,+z,-z`.
+- `buildCube()` rebuilds solved geometry using the currently active shared sticker materials.
 
-- **Notation supported**: face turns `U D L R F B`, slice turns `M E S`, whole-cube rotations `x y z` (lowercase); each token may carry `'` (counter-clockwise) and/or `2` (half turn), e.g. `R`, `R'`, `U2`, `M2`, `x'`.
-- **Move table** (axis, layer coordinate, base direction sign for a clockwise turn):
-  - U: y, +1, −1 · D: y, −1, +1 · R: x, +1, −1 · L: x, −1, +1 · F: z, +1, −1 · B: z, −1, +1
-  - M: x, 0, +1 (follows L) · E: y, 0, +1 (follows D) · S: z, 0, −1 (follows F)
-  - x: x, ALL, −1 (like R) · y: y, ALL, −1 · z: z, ALL, −1
-- **Animation**: to perform a move, reset an invisible pivot `Group` at the origin, `pivot.attach()` every cubie whose position on the move's axis matches the layer (|pos − layer·SP| < 0.4; ALL takes every cubie), then tween `pivot.rotation[axis]` from 0 to `(π/2) × (2 if double) × dir × (−1 if prime)` using requestAnimationFrame and an **ease-out cubic** curve. Base duration ~260ms (buttons/tutorial ≈ this, patterns 300ms, scramble 130ms); double turns take 1.6×. A `2` move is ONE smooth 180° motion, not two 90° snaps.
-- **Snap on completion**: re-`attach()` each cubie back to the cubeGroup, round each position component to the nearest multiple of SP, and snap orientation by extracting Euler angles from the quaternion and rounding each to the nearest π/2, then writing back. This prevents any floating-point drift ever accumulating.
-- **Queue**: all moves flow through a FIFO queue of items `{t, speed, pattern?, idx?, last?}`. A pump function starts the next item only when nothing is animating. Manual button presses, keyboard, tutorial algorithms, scramble, and patterns all enqueue.
-- **HUD**: every move start flashes its token in the HUD for ~0.5s.
-- **Scramble**: 22 random face turns (faces U D L R F B only, never the same face twice in a row, each randomly prime or not), played fast (130ms).
-- **Reset**: clears the queue, waits for any in-flight animation to end, then rebuilds the cube solved. Also hides the sequence readout.
-- **Keyboard**: pressing U/D/L/R/F/B performs that move; holding Shift makes it prime. Escape closes an open overlay if any, otherwise toggles the tutorial panel.
-- **Reduced motion**: if `prefers-reduced-motion: reduce`, drop the base move duration to ~80ms.
+## 6. Color palettes
 
-## 7. Auto-spin control
+The palette selector begins with Standard Rubik’s and then the 20 numbered alternates. Slot order is fixed:
 
-A "Spin" slider (range −1 to +1, step 0.05, default 0.1) controls continuous camera orbit: every frame, `theta += dt × sliderValue × 0.6` — but never while the user is dragging. Negative = counter-clockwise, positive = clockwise, 0 = stopped. The value label shows direction and magnitude (e.g., `◂ 0.5`, `0.3 ▸`, `off` at zero). The spin continues during move animations and pattern playback (it's camera-only, so it never affects move correctness).
+1. White → U
+2. Yellow → D
+3. Blue → B
+4. Green → F
+5. Red → R
+6. Orange → L
 
-## 8. Themes
+| # | Palette | U | D | B | F | R | L |
+|---:|---|---|---|---|---|---|---|
+| 0 | Standard Rubik’s | `#F6F7FB` | `#FFD500` | `#0057D8` | `#00B74A` | `#E0271B` | `#FF7A00` |
+| 1 | Neon Arcade | `#00E5FF` | `#FF2D95` | `#B7FF00` | `#7A00FF` | `#FF6B00` | `#F8F9FA` |
+| 2 | Retro 1970s | `#6B8E23` | `#DDAA00` | `#C6531C` | `#007C7A` | `#F4E4C1` | `#5A3625` |
+| 3 | Desert Sunset | `#E9C46A` | `#264653` | `#E76F51` | `#8AB17D` | `#C85A3D` | `#9C89B8` |
+| 4 | Ocean Reef | `#66CDAA` | `#173F5F` | `#FF6F61` | `#00A6A6` | `#F9C74F` | `#F8F4E3` |
+| 5 | Pastel Candy | `#A8E6CF` | `#CDB4DB` | `#FFC8A2` | `#A2D2FF` | `#FFF3A3` | `#FFAFCC` |
+| 6 | Gothic Jewel | `#007F5F` | `#A4161A` | `#0B4F8A` | `#5A189A` | `#D4A017` | `#F1E9DA` |
+| 7 | Earth & Clay | `#C28B36` | `#A44A3F` | `#667A3E` | `#4F5D75` | `#E8DDCB` | `#2B2D42` |
+| 8 | Bauhaus | `#D7263D` | `#0057B8` | `#F5C400` | `#111111` | `#F5F5F5` | `#8D99AE` |
+| 9 | Nordic Winter | `#D8F3FF` | `#3A6EA5` | `#2D6A4F` | `#9D174D` | `#FAFAFA` | `#7D8597` |
+| 10 | Japanese Garden | `#7A9E45` | `#E8A0BF` | `#264653` | `#E76F51` | `#F6F0E2` | `#C9B458` |
+| 11 | Miami Vice | `#00F5D4` | `#F15BB5` | `#9B5DE5` | `#FEE440` | `#00BBF9` | `#14213D` |
+| 12 | Forest Mushroom | `#4F772D` | `#B08968` | `#BC6C25` | `#FEFAE0` | `#6D597A` | `#283618` |
+| 13 | Ice Cream Shop | `#F28482` | `#84A98C` | `#F6E8C3` | `#577590` | `#F6BD60` | `#9D4EDD` |
+| 14 | Cyberpunk | `#00D9FF` | `#FF00A8` | `#39FF14` | `#6F00FF` | `#FFB000` | `#0A0A0A` |
+| 15 | Autumn Leaves | `#B23A48` | `#E76F00` | `#D4A017` | `#6B7D3A` | `#6D214F` | `#F2E8CF` |
+| 16 | Southwestern Tile | `#2A9D8F` | `#1D4E89` | `#C65D3B` | `#E9B44C` | `#D9A066` | `#F4F1DE` |
+| 17 | Galaxy | `#E056FD` | `#6C5CE7` | `#0984E3` | `#00CEC9` | `#FDCB6E` | `#2D3436` |
+| 18 | Color-Vision Friendly | `#E69F00` | `#56B4E9` | `#009E73` | `#F0E442` | `#D55E00` | `#CC79A7` |
+| 19 | ColorBrewer Set2 | `#66C2A5` | `#FC8D62` | `#8DA0CB` | `#E78AC3` | `#A6D854` | `#FFD92F` |
+| 20 | Mineral Spectrum | `#343A40` | `#F8F9FA` | `#B87333` | `#0B8F6A` | `#3454D1` | `#7B2CBF` |
 
-Four themes selectable from the header pills; **Nebula** is the default. Switching a theme must:
-1. Set `data-theme` on `<body>` (CSS gradient backgrounds transition ~1.1s) and update the CSS custom properties `--accent` / `--accent-soft` (and, for Daylight, light-mode glass/text variables via the attribute selector).
-2. Smoothly **tween the 3D scene** over ~1s (ease-out): hemisphere sky/ground colors and intensity, key light color/intensity, rim light color/intensity, ambient intensity, star opacity, grid opacity, ground-shadow opacity — lerping colors and numbers from current to target.
+Palette behavior:
 
-Exact theme targets:
+- Replace the six shared sticker texture maps in place; dispose of old maps.
+- Never reset, unscramble, rotate, or rearrange cubies.
+- May be changed during animation without interrupting the move queue.
+- RESET keeps the selected palette.
+- Reload returns to Standard Rubik’s because no storage is used.
+- Dropdown labels show numbered names; title text may show the six hex values.
 
-| Theme | Body background | Accent | Hemi (sky/ground/int) | Key (color/int) | Rim (color/int) | Amb | Stars | Grid | Shadow |
-|---|---|---|---|---|---|---|---|---|---|
-| Nebula | radial deep indigo → near-black (`#1b2050 → #0b0d1f → #05060f`) | `#59e3ff` | `0xbfd6ff` / `0x10121f` / 0.85 | `0xffffff` / 0.95 | `0x59e3ff` / 0.6 | 0.22 | 0.9 | 0 | 0.22 |
-| Synthwave | linear `#0b021a → #2a0b45 → #ff2e88` | `#ff4fa3` | `0xff9ad5` / `0x1a0530` / 0.7 | `0xffd1ec` / 0.85 | `0x00e5ff` / 0.85 | 0.2 | 0.35 | 0.55 | 0.3 |
-| Daylight | radial light `#f4f6fa → #dde3ee → #c3ccdd` (light UI: dark text, light glass) | `#2456e6` | `0xffffff` / `0xb9c2d6` / 1.0 | `0xfff6e8` / 1.05 | `0x9db7ff` / 0.35 | 0.5 | 0 | 0 | 0.16 |
-| Ember | radial `#3b1408 → #1c0805 → #0b0302` | `#ffb54d` | `0xffd2a1` / `0x2a0d05` / 0.75 | `0xffbe8a` / 1.05 | `0xff5a2b` / 0.7 | 0.18 | 0.25 | 0 | 0.34 |
+## 7. Move engine
 
-## 9. Solving tutorial (GUIDE panel)
+Supported tokens: `U D L R F B M E S x y z`, optionally with `'` and/or `2`.
 
-A step navigator: header shows "STEP n / 8" plus 8 small progress tick bars (filled through the current step) and a ✕ close; scrollable body; footer with "◂ Back" and a primary "Next ▸" (on step 8 the button reads "Start over" and loops to step 1). Algorithm blocks render each token as a notation chip plus a "▶ Play" button that enqueues the algorithm on the live cube from its current state. Clicking Play must work for every algorithm block, including ones embedded mid-step.
+| Move | Axis | Layer | Direction |
+|---|---|---:|---:|
+| U | y | 1 | -1 |
+| D | y | -1 | 1 |
+| R | x | 1 | -1 |
+| L | x | -1 | 1 |
+| F | z | 1 | -1 |
+| B | z | -1 | 1 |
+| M | x | 0 | 1 |
+| E | y | 0 | 1 |
+| S | z | 0 | -1 |
+| x | x | ALL | -1 |
+| y | y | ALL | -1 |
+| z | z | ALL | -1 |
 
-The 8 steps (titles, teaching content in this spirit, and these exact algorithms):
-1. **Meet your cube** — centers never move (white opposite yellow, green opposite blue, red opposite orange); notation explainer (letters = faces, plain = clockwise facing that side, `'` = counter-clockwise). Warm-up algorithm: `R U R' U'` with a note that six repetitions return a solved cube to solved.
-2. **The white cross** — white center up; place the 4 white edges matching side colors to centers; teach the "daisy" trick (white edges around the yellow center first, then match each petal's side color to its center and turn that face twice). Demo algorithm: `F2` (dropping a matched petal into place).
-3. **White corners** — find a white corner in the bottom layer, park it directly below its slot, hold that slot front-right, repeat `R' D' R D` (1–5 times) until it pops in white-side-up; note about ejecting wrongly-placed top-layer corners.
-4. **Middle layer edges** — flip white down; find a top-layer edge with no yellow, match its front color to a center; if it belongs right: `U R U' R' U' F' U F`; if left: `U' L' U L U F U' F'`; note about ejecting a wrongly-seated edge by running either algorithm.
-5. **The yellow cross** — dot → L → line → cross using `F R U R' U' F'` (hold an L back-left or a line horizontal; repeat up to three times).
-6. **Line up the yellow edges** — rotate U until ≥2 edges match centers; adjacent matches at back and right; run the Sune `R U R' U R U2 R'`, repeat as needed.
-7. **Place the yellow corners** — cycle corners with `U R U' L' U R' U' L`, holding a correct corner front-right (run once from anywhere if none are correct), repeat until all are positioned.
-8. **Twist the last corners** — with an unsolved corner front-right-top, repeat `R' D' R D` (2 or 4 times) until its yellow faces up; then turn ONLY the U face to bring the next corner in (never rotate the whole cube); reassure that the cube looks broken until the final twist. Celebrate.
+- Attach affected cubies to an origin pivot. Layer match tolerance: `.4` around `layer*SP`; ALL selects every cubie.
+- Angle: `(π/2) * (2 if double) * direction * (-1 if prime)`.
+- Ease-out cubic via `requestAnimationFrame`.
+- Standard/guide speed about 260ms, pattern 300ms, scramble 130ms; doubles take 1.6× and animate as one 180° turn.
+- On completion, reattach cubies; round positions to SP multiples and Euler orientation to π/2 multiples, then rebuild quaternion.
+- All input uses one FIFO queue `{t,speed,pattern?,idx?,last?}`.
+- HUD flashes every move token.
+- SCRAMBLE: 22 face turns, no same face twice, random plain/prime; hide sequence strip.
+- RESET: clear move queue and waiting patterns, hide sequence, allow an in-flight turn to finish safely, rebuild solved, retain palette.
+- Keyboard: U/D/L/R/F/B; Shift makes prime; Escape closes overlay or toggles guide; ignore moves while form controls have focus.
+- Reduced motion: move and theme duration about 80ms, short interface transitions, non-smooth chip scrolling.
 
-## 10. Pattern gallery
+## 8. Spin
 
-A `<select>` in the deck with placeholder option "✦ Pattern gallery…" and these 25 patterns (exact names and move sequences):
+Range `-1..1`, step `.05`, default `.1`. Each frame while not dragging:
+
+`theta += dt * value * .6`
+
+Label negative as `◂ magnitude`, positive as `magnitude ▸`, and zero as `off`. Spin continues during cube moves and playback.
+
+## 9. Themes
+
+Nebula is default. Set `body[data-theme]`, update CSS variables, and interpolate scene parameters for about one second (about 80ms under reduced motion).
+
+| Theme | Background | Accent | Hemi sky/ground/int | Key color/int | Rim color/int | Amb | Stars | Grid | Shadow |
+|---|---|---|---|---|---|---:|---:|---:|---:|
+| Nebula | `#1B2050→#0B0D1F→#05060F` radial | `#59E3FF` | `BFD6FF/10121F/.85` | `FFFFFF/.95` | `59E3FF/.6` | .22 | .9 | 0 | .22 |
+| Synthwave | `#0B021A→#2A0B45→#FF2E88` linear | `#FF4FA3` | `FF9AD5/1A0530/.7` | `FFD1EC/.85` | `00E5FF/.85` | .2 | .35 | .55 | .3 |
+| Daylight | `#F4F6FA→#DDE3EE→#C3CCDD` radial | `#2456E6` | `FFFFFF/B9C2D6/1` | `FFF6E8/1.05` | `9DB7FF/.35` | .5 | 0 | 0 | .16 |
+| Ember | `#3B1408→#1C0805→#0B0302` radial | `#FFB54D` | `FFD2A1/2A0D05/.75` | `FFBE8A/1.05` | `FF5A2B/.7` | .18 | .25 | 0 | .34 |
+
+Interpolate all light colors/intensities, star opacity, grid opacity, and ground-shadow opacity.
+
+## 10. Eight-step guide
+
+Panel shows STEP n/8, eight progress ticks, scrollable content, ✕, Back, Next, and Start over on step 8. Every algorithm block has ▶ Play and runs from the cube’s current state.
+
+1. Meet your cube — `R U R' U'`; explain centers and notation; six repetitions return solved to solved.
+2. White cross — daisy method; demo `F2`.
+3. White corners — repeat `R' D' R D` beneath front-right slot.
+4. Middle edges — right `U R U' R' U' F' U F`; left `U' L' U L U F U' F'`.
+5. Yellow cross — `F R U R' U' F'`.
+6. Line up yellow edges — `R U R' U R U2 R'`.
+7. Place yellow corners — `U R U' L' U R' U' L`.
+8. Twist last corners — repeat `R' D' R D`, then turn only U to bring in the next corner.
+
+## 11. Pattern gallery
+
+Placeholder: `✦ Pattern gallery…`
 
 1. Checkerboard — `U2 D2 F2 B2 L2 R2`
 2. Six Spots — `U D' R L' F B' U D'`
@@ -130,47 +212,106 @@ A `<select>` in the deck with placeholder option "✦ Pattern gallery…" and th
 24. Spiral Pattern — `L' B' D U R U' R' D2 R2 D L D' L' R' F U`
 25. Opposite Corners — `R L U2 F2 D2 F2 R L F2 D2 B2 D2`
 
-Behavior on selection (fires on the `change` event, i.e., when the user picks and releases):
-- **Cumulative playback**: the pattern plays from the cube's CURRENT state — it must NOT reset the cube first. Users stack patterns deliberately; RESET is the only way back to solved.
-- If moves are already animating or queued, the new pattern **waits** until the queue fully drains, then starts (poll ~every 40ms). It never cancels or interleaves with what's running.
-- The select immediately returns to its placeholder value and blurs, so the same pattern can be chosen again back-to-back.
-- **Sequence readout**: the pattern's name (small uppercase accent label) and every move token appear as chips in the `#seq` strip above the deck. As each move plays: the current chip highlights (accent background, slight scale-up), completed chips stay tinted (accent-soft), upcoming chips stay muted. When the last move finishes, all chips show completed. The strip persists until the next scramble/reset (both hide it).
-- **Delay between moves**: the "Delay" slider — range **0.25s to 5s, step 0.25s, default 1s** — inserts that pause AFTER each pattern move before the next starts (no delay after the final move). Read the slider live at each step so dragging it mid-pattern changes the remaining pacing. The value label shows e.g. `0.25s`, `1s`, `2.5s`. The delay applies only to pattern playback, not to button presses, tutorial algorithms, or scramble.
-- Move animation speed within patterns: 300ms per quarter turn (1.6× for doubles).
+Selection behavior:
 
-## 11. Rail buttons and overlays
+- Play cumulatively from current state; never reset automatically.
+- If work is active, wait until the move queue drains; poll about every 40ms; never interleave.
+- Reset dropdown to placeholder and blur, allowing repeat selection.
+- **Immediately hide the control deck and deactivate CONTROLS after a valid pattern selection.** CONTROLS reveals it again.
+- Sequence strip shows pattern name and all tokens; current highlighted, completed tinted, upcoming muted; persist until Scramble or Reset.
+- Delay slider: `.25..5s`, step `.25`, default `1s`; read live after each non-final pattern move; pattern-only.
+- Pattern turn speed 300ms, doubles 1.6×.
 
-- **GUIDE** — toggles the tutorial panel (slide animation). The panel's own ✕ also hides it. Button reflects state.
-- **CONTROLS** — toggles visibility of the entire control deck (a body-level class). While the deck is hidden, the sequence readout (if visible) drops to the bottom of the screen. Hiding both panel and deck yields a clean full-screen cube view.
-- **TECH** — toggles a detailed "Under the Hood" overlay explaining, in plain but substantive language, every technology in the app: Three.js/WebGL and the perspective camera; the 27-cubie construction; runtime canvas-painted sticker textures; the pivot-group face-turn technique and quaternion snapping; requestAnimationFrame and ease-out cubic motion; the move queue; the four-light rig, PCF soft shadow mapping, points starfield, and grid; theme interpolation; the no-framework HTML/CSS UI (custom properties, backdrop-filter glass, flexbox/grid, media queries); Google Fonts; Pointer Events, wheel and pinch input; and single-file GitHub Pages hosting with cdnjs delivery.
-- **HELP** — toggles a "How to Use CUBED" overlay documenting every feature: orbit/zoom/spin; the twelve move buttons and full notation (letters, `'`, `2`, slices M/E/S, rotation x) plus keyboard shortcuts; Scramble and Reset; the pattern gallery including cumulative behavior, the waiting rule, the sequence readout, and the 0.25–5s delay slider; the 8-step solving guide and its Play buttons; the four themes; and the rail buttons themselves.
-- Opening one overlay closes the other. Each closes via its ✕, clicking the dimmed backdrop, pressing its rail button again, or Escape. Rail buttons show accent "on" state while open.
+## 12. Rail, Tech, and Help
 
-## 12. Responsive behavior (≤880px)
+- GUIDE toggles tutorial; panel ✕ hides it; preserve step and cube.
+- CONTROLS toggles deck; hidden sequence moves down; hide GUIDE and CONTROLS for clean view.
+- TECH explains Three.js/WebGL, camera, cubies, runtime textures, live palette replacement, pivot turns, snapping, animation, queue, lights, shadows, stars, grid, themes, CSS/UI, fonts, input, and GitHub Pages hosting.
+- HELP must document every current capability, including:
+  - orbit, wheel, pinch, spin direction/off/drag pause;
+  - buttons, notation, slices, rotations, queue, HUD, keyboard;
+  - Scramble and Reset, including waiting-pattern clearing and palette retention;
+  - all 25 cumulative patterns, waiting, repeat selection, automatic control hiding, sequence states/persistence, Delay;
+  - Standard plus 20 palettes, live recoloring, state preservation, Reset persistence, reload to standard;
+  - eight guide steps, ticks, navigation, Play, close behavior;
+  - four themes;
+  - all rail actions and clean view;
+  - all overlay close methods;
+  - mobile, orientation, in-app browser, and reduced-motion behavior.
+- Opening one overlay closes the other. Close via ✕, backdrop, same rail button, or Escape. Active rail styling must match.
 
-Panel becomes a bottom sheet; rail moves to top-right with narrower buttons; hint hidden; deck wraps with the patterns column first at full width; move buttons shrink to ~38×34px; sequence strip sits higher to clear the taller deck; overlay sheets get tighter padding; theme pills compress; tagline hidden.
+## 13. Responsive behavior
 
-## 13. Quality bar
+At 880px and below: guide becomes bottom sheet; rail becomes compact top-right row; hint hides; deck wraps with pattern/palette controls first; move buttons shrink; sequence clears the taller deck; overlay padding tightens; theme pills compress; tagline hides. Touch controls and canvas centering remain functional.
 
-- No console errors. Valid HTML. All interactive elements have visible hover/active states; sliders use `accent-color`.
-- The cube must be perfectly centered in the viewport on any screen, any DPI, any orientation, including in-app browsers (see §4's sizing requirement).
-- Move mechanics must be flawless: after arbitrarily many moves, patterns, and scrambles, stickers align exactly to the grid with no drift, and RESET always yields a perfect solved cube.
-- Playing any tutorial algorithm 6× (for `R U R' U'`) or 2×/3× (self-inverse patterns like Checkerboard from solved) must return the cube to its prior state — use this to verify move-direction correctness for every face, slice, and rotation, primes included.
-- 60fps target on a mid-range phone.
+## 14. Deployment
 
-## 14. Acceptance checklist
+- Source repository: `markplaga/Rubiks-cube-gpt`.
+- Source branch: `main`.
+- GitHub Pages branch: `gh-pages`.
+- Entry point: root `index.html`.
+- `.nojekyll` is allowed.
+- Keep `index.html` synchronized between `main` and `gh-pages`.
+- Keep this specification synchronized with behavior changes.
 
-- [ ] Single index.html; loads with no errors; Three.js r128 from cdnjs; fonts load with fallbacks
-- [ ] Cube renders centered; drag-orbit, wheel zoom, pinch zoom all work; phi/dist clamped
-- [ ] 12 move buttons + keyboard (Shift = prime) animate correct faces/directions; HUD flashes tokens
-- [ ] Doubles (X2) animate as one 180° motion; M/E/S and x/y/z moves work
-- [ ] Scramble = 22 fast random face turns, no repeats back-to-back; Reset restores solved instantly and clears the sequence strip
-- [ ] 8 tutorial steps with exact algorithms; every ▶ Play works; Back/Next/Start-over and progress ticks work; ✕ hides panel
-- [ ] All 25 patterns present with exact sequences; selection plays cumulatively from current state; re-selecting the same pattern works; concurrent selection waits for the queue to drain
-- [ ] Sequence readout shows name + chips with now/done highlighting; persists until scramble/reset
-- [ ] Delay slider 0.25–5s step 0.25 default 1s; live-adjustable mid-pattern; applies only between pattern moves
-- [ ] Spin slider −1…+1 controls direction and speed; 0 stops; paused while dragging; runs during playback
-- [ ] Four themes with exact palettes; scene lighting/stars/grid/shadow tween smoothly ~1s; UI accent updates everywhere
-- [ ] Rail: GUIDE and CONTROLS toggle their targets with lit state; TECH and HELP overlays open/close via button, ✕, backdrop, and Escape; opening one closes the other
-- [ ] Mobile layout per §12; canvas stays centered in Messenger/other WebViews
-- [ ] Reduced-motion preference speeds up move animations
+## 15. Quality and validation
+
+Required quality:
+
+- Valid HTML, parseable CSS, no duplicate IDs, JavaScript syntax valid, no console errors.
+- Visible hover/active/focus states and accent-colored sliders.
+- Cube centered at every DPI/orientation; no cubie drift; Reset solved with active palette.
+- Palette changes never alter cubie state.
+- Pattern auto-hide never hides sequence readout.
+- Target about 60fps on a mid-range phone.
+- Review Help whenever user-facing behavior changes.
+
+Static validation before publishing:
+
+1. Syntax-check inline JavaScript.
+2. Parse HTML and CSS; check duplicate IDs.
+3. Verify 12 move buttons, 8 steps, 9 guide algorithm blocks, 25 exact patterns, 21 exact palettes, and all 120 alternate-palette hex values.
+4. Verify slot order `U,D,B,F,R,L`.
+5. Verify pattern selection adds `controls-hidden` and deactivates CONTROLS.
+6. Verify Reset does not reset palette index.
+7. Verify exact Delay and Spin ranges/defaults.
+8. Verify Scramble count/no-repeat rule, queue, 40ms pattern waiting, every-frame sizing, resize/orientation/visualViewport listeners, themes, Help coverage, no storage, and no OrbitControls.
+9. Run move identities: each move plus inverse, each half turn twice, `R U R' U'` six times, and Checkerboard twice.
+
+Current implementation validation snapshot:
+
+- [x] JavaScript syntax passed.
+- [x] HTML parsed without recovery errors; no duplicate IDs.
+- [x] CSS parsed with no top-level errors.
+- [x] 23/23 static feature checks passed.
+- [x] 12 moves, 8 steps, 9 guide algorithm blocks, 25 patterns, and 21 palettes matched.
+- [x] All pattern sequences and all alternate palette values matched exactly.
+- [x] Pattern auto-hide, live palette texture replacement, Reset palette retention, and comprehensive Help coverage were present.
+- [x] Every-frame and event-driven sizing checks were present.
+- [x] 26/26 discrete move-identity tests passed for `U D L R F B M E S x y z`, the sixfold warm-up, and double Checkerboard.
+- [ ] Repeat manual WebGL interaction testing in deployed desktop and mobile browsers after future code changes.
+
+## 16. Acceptance checklist
+
+- [ ] Single-file application, Three.js r128, correct fonts, no build step.
+- [ ] HTML/CSS/JS validation passes; no duplicate IDs or console errors.
+- [ ] Cube centered; orbit, wheel, touch drag, pinch, and camera clamps work.
+- [ ] Twelve buttons and keyboard directions work; HUD flashes.
+- [ ] Doubles are one 180° animation; slices and rotations work.
+- [ ] Snapping prevents drift.
+- [ ] Scramble is 22 turns with no consecutive same face.
+- [ ] Reset clears active/waiting work, solves, clears sequence, and keeps palette.
+- [ ] Eight exact guide steps and all Play/navigation controls work.
+- [ ] All 25 patterns are exact, cumulative, repeatable, and wait correctly.
+- [ ] Pattern selection immediately hides controls; CONTROLS restores them.
+- [ ] Sequence states and persistence work.
+- [ ] Delay and Spin ranges, defaults, live behavior, and scope are exact.
+- [ ] Standard plus 20 exact palettes are present.
+- [ ] Palette changes preserve cube state and work during animation.
+- [ ] Reset retains palette; reload returns to standard.
+- [ ] Four exact themes transition correctly.
+- [ ] GUIDE/CONTROLS state and TECH/HELP overlay close behavior work.
+- [ ] TECH and HELP document every current capability.
+- [ ] Mobile/in-app-browser layout and reduced motion work.
+- [ ] `main` and `gh-pages` publish the same `index.html`.
+- [ ] `SPEC.md` is updated whenever behavior changes.
