@@ -172,6 +172,46 @@
   }
   #hint b{color:var(--text);font-weight:600}
 
+  /* ---------- patterns ---------- */
+  .patterns{display:flex;flex-direction:column;gap:7px;justify-content:center;min-width:180px}
+  .patterns select{
+    font-family:'Chakra Petch',sans-serif;font-size:12px;letter-spacing:.04em;
+    background:rgba(0,0,0,.25);color:var(--text);
+    border:1px solid var(--glass-line);border-radius:9px;padding:9px 10px;
+    cursor:pointer;outline:none;max-width:200px;
+  }
+  body[data-theme="daylight"] .patterns select{background:rgba(20,30,60,.06)}
+  .delay-row{display:flex;align-items:center;gap:8px}
+  .delay-row label{font-size:10px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+  .delay-row input[type=range]{flex:1;min-width:70px;accent-color:var(--accent)}
+  #delayVal{font-family:'Chakra Petch',sans-serif;font-size:11px;color:var(--accent);min-width:38px;text-align:right}
+
+  #seq{
+    position:fixed;left:50%;transform:translateX(-50%);bottom:152px;z-index:8;
+    display:none;flex-wrap:wrap;justify-content:center;gap:5px;
+    max-width:min(92vw,720px);
+    background:var(--glass);backdrop-filter:blur(14px);
+    border:1px solid var(--glass-line);border-radius:14px;padding:10px 12px;
+  }
+  #seq.show{display:flex}
+  #seq .sq-name{width:100%;text-align:center;font-family:'Chakra Petch',sans-serif;
+    font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-bottom:2px}
+  #seq .sq{
+    font-family:'Chakra Petch',sans-serif;font-weight:600;font-size:12px;
+    padding:4px 7px;border-radius:6px;min-width:27px;text-align:center;
+    background:rgba(255,255,255,.06);color:var(--muted);transition:all .2s;
+  }
+  body[data-theme="daylight"] #seq .sq{background:rgba(20,30,60,.08)}
+  #seq .sq.now{background:var(--accent);color:var(--ink);transform:scale(1.15)}
+  #seq .sq.done{color:var(--text);background:var(--accent-soft)}
+
+  @media (max-width:880px){
+    .patterns{width:100%;flex-direction:row;align-items:center;min-width:0;order:-1}
+    .patterns select{flex:1;max-width:none}
+    .delay-row{flex:1}
+    #deck{flex-wrap:wrap;max-width:94vw;justify-content:center}
+    #seq{bottom:178px}
+  }
   @media (max-width:880px){
     #panel{left:12px;right:12px;width:auto;top:auto;bottom:96px;max-height:46vh}
     #panel.hidden{transform:translateY(calc(100% + 120px))}
@@ -221,12 +261,25 @@
   </div>
 </aside>
 
+<div id="seq"></div>
+
 <div id="deck">
   <div class="moves" id="moveBtns"></div>
   <div class="deck-sep"></div>
   <div class="actions">
     <button id="scrambleBtn">SCRAMBLE</button>
     <button id="resetBtn">RESET</button>
+  </div>
+  <div class="deck-sep"></div>
+  <div class="patterns">
+    <select id="patternSel" aria-label="Pattern gallery">
+      <option value="">✦ Pattern gallery…</option>
+    </select>
+    <div class="delay-row">
+      <label for="delaySlider">Delay</label>
+      <input id="delaySlider" type="range" min="0.5" max="5" step="0.25" value="1">
+      <span id="delayVal">1s</span>
+    </div>
   </div>
 </div>
 
@@ -378,6 +431,12 @@ const MOVES = {
   U:{axis:'y',layer: 1,dir:-1}, D:{axis:'y',layer:-1,dir: 1},
   R:{axis:'x',layer: 1,dir:-1}, L:{axis:'x',layer:-1,dir: 1},
   F:{axis:'z',layer: 1,dir:-1}, B:{axis:'z',layer:-1,dir: 1},
+  M:{axis:'x',layer: 0,dir: 1}, // middle slice, follows L
+  E:{axis:'y',layer: 0,dir: 1}, // equator slice, follows D
+  S:{axis:'z',layer: 0,dir:-1}, // standing slice, follows F
+  x:{axis:'x',layer:'all',dir:-1}, // whole-cube rotations
+  y:{axis:'y',layer:'all',dir:-1},
+  z:{axis:'z',layer:'all',dir:-1},
 };
 let queue = [], animating = false, moveSpeed = 260;
 const hud = document.getElementById('hud');
@@ -388,20 +447,11 @@ function enqueue(tokens, speed){
   pump();
 }
 function parseAlg(str){
-  const out = [];
-  str.trim().split(/\s+/).forEach(tk=>{
-    if(!tk) return;
-    const face = tk[0];
-    if(tk.includes('2')){ out.push(face, face); }
-    else if(tk.includes("'")){ out.push(face+"'"); }
-    else out.push(face);
-  });
-  return out;
+  return str.trim().split(/\s+/).filter(Boolean);
 }
 function pump(){
   if(animating || !queue.length) return;
-  const {t, speed} = queue.shift();
-  doMove(t, speed);
+  doMove(queue.shift());
 }
 function showHud(t){
   hud.textContent = t;
@@ -409,20 +459,25 @@ function showHud(t){
   clearTimeout(hudTimer);
   hudTimer = setTimeout(()=>hud.classList.remove('show'), 500);
 }
-function doMove(token, speed){
-  const face = token[0], prime = token.includes("'");
+function doMove(item){
+  const token = item.t, face = token[0];
   const def = MOVES[face];
   if(!def) { pump(); return; }
+  const prime = token.includes("'"), dbl = token.includes('2');
   animating = true;
   showHud(token);
+  if(item.idx !== undefined) seqMark(item.idx);
   pivot.rotation.set(0,0,0);
   pivot.updateMatrixWorld();
-  const picked = cubies.filter(c=>Math.abs(c.position[def.axis] - def.layer*SP) < 0.4);
+  const picked = def.layer==='all'
+    ? cubies.slice()
+    : cubies.filter(c=>Math.abs(c.position[def.axis] - def.layer*SP) < 0.4);
   picked.forEach(c=>pivot.attach(c));
-  const target = (Math.PI/2) * def.dir * (prime?-1:1);
+  const target = (Math.PI/2) * (dbl?2:1) * def.dir * (prime?-1:1);
+  const dur = item.speed * (dbl?1.6:1);
   const start = performance.now();
   function step(now){
-    let k = Math.min(1,(now-start)/speed);
+    let k = Math.min(1,(now-start)/dur);
     const e = 1 - Math.pow(1-k, 3); // ease-out cubic
     pivot.rotation[def.axis] = target*e;
     if(k<1){ requestAnimationFrame(step); }
@@ -434,8 +489,11 @@ function doMove(token, speed){
         eu.x = snapAngle(eu.x); eu.y = snapAngle(eu.y); eu.z = snapAngle(eu.z);
         c.quaternion.setFromEuler(eu);
       });
-      animating = false;
-      pump();
+      if(item.last) seqFinish();
+      const wait = (item.pattern && queue.length)
+        ? Math.round(parseFloat(delaySlider.value)*1000) : 0;
+      if(wait > 0){ setTimeout(()=>{ animating=false; pump(); }, wait); }
+      else { animating = false; pump(); }
     }
   }
   requestAnimationFrame(step);
@@ -444,7 +502,8 @@ const snap = v => Math.round(v/SP)*SP;
 const snapAngle = a => Math.round(a/(Math.PI/2))*(Math.PI/2);
 
 function scramble(){
-  const faces = Object.keys(MOVES);
+  hideSeq();
+  const faces = ["U","D","L","R","F","B"];
   const seq = [];
   let last = '';
   for(let i=0;i<22;i++){
@@ -456,6 +515,7 @@ function scramble(){
 }
 function reset(){
   queue.length = 0;
+  hideSeq();
   // wait for current animation to end, then rebuild
   const wait = setInterval(()=>{
     if(!animating){ clearInterval(wait); buildCube(); }
@@ -660,6 +720,91 @@ document.getElementById('panelClose').addEventListener('click', ()=>{ panel.clas
 window.addEventListener('keydown', e=>{
   if(e.key==='Escape'){ panel.classList.toggle('hidden'); refreshToggle(); }
 });
+
+/* ============================================================
+   PATTERN GALLERY
+============================================================ */
+const PATTERNS = [
+  ["Checkerboard","U2 D2 F2 B2 L2 R2"],
+  ["Six Spots","U D' R L' F B' U D'"],
+  ["Crosses (4 Crosses)","B2 F2 D' L2 R2 U2 B2 F2 U' R D2 L2 R2 U2 R'"],
+  ["Cube Inside a Cube","F L F U' R U F2 L2 U' L' B D' B' L2 U"],
+  ["Cube in Cube in Cube","U' L' U' F' R2 B' R F U B2 U B' L U' F U R F'"],
+  ["Four Centers","F2 B2 U D' R2 L2 U D'"],
+  ["Broad Stripes / Pillars","L2 R2 B2 F2"],
+  ["Vertical Stripes","F U F R L2 B D' R D2 L D' B R2 L F U F"],
+  ["Horizontal Stripes","x F U F R L2 B D' R D2 L D' B R2 L F U F x'"],
+  ["Checker Zigzag","R2 L2 F2 B2 U F2 B2 U2 F2 B2 U"],
+  ["Anaconda","L U B' U' R L' B R' F B' D R D' F'"],
+  ["Python","F2 R' B' U R' L F' L F' B D' R B L2"],
+  ["Black Mamba","R D L F' R L' D R' U D' B U' R' D'"],
+  ["Green Mamba","R D R F R' F' B D R' U' B' U D2"],
+  ["Union Jack","U F B' L2 U2 L2 F' B U2 L2 U"],
+  ["Superflip","U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2"],
+  ["Crosses on Every Face","U2 R2 L2 F2 B2 D2 L2 R2 F2 B2"],
+  ["Six T-Shapes","F2 R2 U2 F' B D2 L2 F B"],
+  ["Plus-and-Minus","U2 R2 L2 U2 R2 L2"],
+  ["Christmas Tree / Gift Box","U B2 R2 B2 L2 F2 R2 D' F2 L2 B F' L F2 D U' R2 F' L' R'"],
+  ["Flower Pattern","L' R U D F B' R L' M2 E2 S2"],
+  ["Twisted Peaks","F B' U F U F U L B L2 B' U F' L U L' B"],
+  ["Wire Pattern","R L F B R L F B R L F B R2 B2 L2 R2 B2 L2"],
+  ["Spiral Pattern","L' B' D U R U' R' D2 R2 D L D' L' R' F U"],
+  ["Opposite Corners","R L U2 F2 D2 F2 R L F2 D2 B2 D2"],
+];
+const patternSel = document.getElementById('patternSel');
+const delaySlider = document.getElementById('delaySlider');
+const delayVal = document.getElementById('delayVal');
+const seqEl = document.getElementById('seq');
+
+PATTERNS.forEach((p,i)=>{
+  const o = document.createElement('option');
+  o.value = i; o.textContent = p[0];
+  patternSel.appendChild(o);
+});
+delaySlider.addEventListener('input', ()=>{
+  delayVal.textContent = (+delaySlider.value).toFixed(2).replace(/\.?0+$/,'') + 's';
+});
+
+function renderSeq(name, tokens){
+  seqEl.innerHTML = `<span class="sq-name">${name}</span>` +
+    tokens.map(t=>`<span class="sq">${t}</span>`).join('');
+  seqEl.classList.add('show');
+}
+function seqMark(i){
+  seqEl.querySelectorAll('.sq').forEach((c,j)=>{
+    c.classList.toggle('now', j===i);
+    c.classList.toggle('done', j<i);
+  });
+}
+function seqFinish(){
+  seqEl.querySelectorAll('.sq').forEach(c=>{ c.classList.remove('now'); c.classList.add('done'); });
+}
+function hideSeq(){ seqEl.classList.remove('show'); }
+
+patternSel.addEventListener('change', ()=>{
+  const v = patternSel.value;
+  if(v === '') return;
+  const [name, alg] = PATTERNS[+v];
+  patternSel.value = '';          // so the same pattern can be picked again
+  patternSel.blur();
+  startPattern(name, alg);
+});
+function startPattern(name, alg){
+  queue.length = 0;               // cancel anything pending
+  const begin = ()=>{
+    buildCube();                  // patterns start from a solved cube
+    const tokens = parseAlg(alg);
+    renderSeq(name, tokens);
+    tokens.forEach((t,idx)=>queue.push({
+      t, speed:300, pattern:true, idx, last: idx===tokens.length-1
+    }));
+    pump();
+  };
+  if(!animating){ begin(); }
+  else{
+    const w = setInterval(()=>{ if(!animating){ clearInterval(w); begin(); } }, 40);
+  }
+}
 
 /* ============================================================
    MOVE BUTTONS
