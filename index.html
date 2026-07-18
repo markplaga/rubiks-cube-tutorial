@@ -686,9 +686,13 @@ window.addEventListener('keydown', e=>{
 /* ============================================================
    RENDER LOOP
 ============================================================ */
+let viewW = 0, viewH = 0;
 function resize(){
-  const w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w,h);            // also updates canvas CSS size
+  const w = canvas.clientWidth || window.innerWidth;
+  const h = canvas.clientHeight || window.innerHeight;
+  if(w === viewW && h === viewH) return;
+  viewW = w; viewH = h;
+  renderer.setSize(w, h, false);   // buffer only — CSS keeps the canvas at 100% of the screen
   camera.aspect = w/h; camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize);
@@ -698,6 +702,7 @@ resize();
 
 let t0 = performance.now();
 function loop(now){
+  resize(); // self-correct if the in-app browser changed the viewport without firing events
   const dt = (now-t0)/1000; t0 = now;
   // gentle idle drift when not dragging
   if(!dragging && !animating && !queue.length) orbit.theta += dt*0.06;
