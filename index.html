@@ -38,7 +38,7 @@
     --ink:#ffffff;
   }
 
-  #stage{position:fixed;inset:0;display:block;touch-action:none;cursor:grab}
+  #stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
   #stage.dragging{cursor:grabbing}
 
   /* ---------- header ---------- */
@@ -688,10 +688,12 @@ window.addEventListener('keydown', e=>{
 ============================================================ */
 function resize(){
   const w = window.innerWidth, h = window.innerHeight;
-  renderer.setSize(w,h,false);
+  renderer.setSize(w,h);            // also updates canvas CSS size
   camera.aspect = w/h; camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', ()=>setTimeout(resize,200));
+if(window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 resize();
 
 let t0 = performance.now();
