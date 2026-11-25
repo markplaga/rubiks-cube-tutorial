@@ -2,10 +2,12 @@
    Same-origin files are cached, plus the Three.js CDN and Google Fonts the
    app needs, so the cube keeps working offline once installed.
    Bump VERSION whenever you change app files so installed copies refresh. */
-const VERSION='cubed-v1';
+const VERSION='cubed-v2';
 const CORE = [
   './', 'index.html', 'manifest.webmanifest',
-  'icons/icon.svg'
+  'icons/icon.svg',
+  'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
+  'icons/apple-touch-icon.png'
 ];
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
