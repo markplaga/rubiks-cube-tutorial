@@ -1,0 +1,24 @@
+{
+  "name": "CUBED \u2014 Learn to Solve the Rubik's Cube",
+  "short_name": "CUBED",
+  "description": "Learn to solve the Rubik's Cube on a live, animated 3D cube \u2014 8-step guide, algorithms, and 25 patterns.",
+  "id": "./",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0d1f",
+  "theme_color": "#0b0d16",
+  "categories": [
+    "games",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
